@@ -1,0 +1,90 @@
+DIGIT: /[0-9]/
+INT: DIGIT+
+UPPER: /[A-Z]/
+LOWER: /[a-z]/
+IDENT: (UPPER|LOWER) (/_/|UPPER|LOWER|DIGIT|/[₀₁₂₃₄₅₆₇₈₉!?]/)*
+NEWLINE: (/\r/? /\n/)+
+WS: /[ \t\f\r\n]/+
+LINECOMMENT: "//" /[^\n]*/ NEWLINE
+COMMENT: /\/\*([^\*]|\*+[^\/])*\*+\//
+
+?type: "int"                                     -> int_type
+    | "bool"                                     -> bool_type
+    | "⟨" type_list "⟩"                          -> tuple_type
+    | alternative_list                           -> variant_type
+    | "(" type_list ")" "->" type                -> function_type
+    | "(" type ")"
+    
+?type_list:                                     -> empty
+    | type                                      -> single
+    | type "," type_list                         -> push
+
+?alternative: IDENT ":" type                     -> alternative
+    
+?alternative_list: alternative                   -> single
+    | alternative "|" alternative_list           -> push
+
+?type_opt: ":" type                              -> just
+    |                                            -> nothing
+
+?expression: "if" expression_logic "then" expression "else" expression    -> condition
+    | "let" IDENT type_opt "=" expression "in" expression -> let_exp
+    | expression_logic
+
+?expression_logic: expression_logic "and" expression_cmp       -> and
+    | expression_logic "or" expression_cmp                     -> or
+    | expression_cmp			                  
+				                  
+?expression_cmp: expression_cmp "==" expression_add            -> equal
+    | expression_cmp "!=" expression_add                       -> not_equal
+    | expression_cmp "<" expression_add                        -> less
+    | expression_cmp ">" expression_add                        -> greater
+    | expression_cmp "<=" expression_add                       -> less_equal
+    | expression_cmp ">=" expression_add                       -> greater_equal
+    | expression_add
+
+?expression_add: expression_add "+" expression_med             -> add
+    | expression_add "-" expression_med                        -> sub
+    | expression_med
+
+?expression_med: expression_med "div" expression_hi            -> int_div
+    | expression_med "/" expression_hi                         -> div
+    | expression_med "%" expression_hi                         -> mod
+    | expression_med "*" expression_hi                         -> mul
+    | expression_hi
+
+?expression_hi: INT                                     -> int
+    | IDENT                                             -> var
+    | expression_hi "#" IDENT                           -> variant_member
+    | "-" expression_hi                                 -> neg
+    | "not" expression_hi                               -> not
+    | "(" expression ")"                                -> paren
+    | "⟨" expression_list "⟩"                           -> tuple
+    | expression_hi "[" expression "]"                  -> index
+    | expression_hi "(" expression_list ")"             -> call
+    | "λ" parameter_list "." expression                 -> lambda
+    | "true"                                            -> true
+    | "false"                                           -> false
+    | "tag" IDENT "(" expression ")" "as" type          -> tag_variant
+    | "match" "(" expression ")" "{" case_list "}"      -> match
+
+?case: "case" IDENT "(" parameter ")" ":" expression    -> case
+
+?case_list: case                                        -> single
+    | case case_list                                    -> push
+
+?expression_list:                                       -> empty
+    | expression                                        -> single
+    | expression "," expression_list                    -> push
+
+parameter: IDENT type_opt                               -> binding
+				                 
+?parameter_list:                                        -> empty
+    | parameter                                         -> single
+    | parameter "," parameter_list                      -> push
+
+program: expression
+
+%ignore COMMENT
+%ignore LINECOMMENT
+%ignore WS
