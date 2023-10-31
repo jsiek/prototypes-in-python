@@ -10,12 +10,8 @@ compare_ops = {'less': lambda x, y: x < y,
 
 # TODO: move most of these out into separate files.
 
-def eval_prim(op, vals, machine, location):
+def eval_prim(op, vals, location):
     match op:
-        case 'breakpoint':
-            machine.pause = True
-            set_debug(True)
-            return Void()
         case 'exit':
             exit(vals[0])
         case 'input':
@@ -23,8 +19,6 @@ def eval_prim(op, vals, machine, location):
         case 'print':
             print(vals[0])
             return Void()
-        case 'copy':
-            return vals[0].duplicate(1, location)
         case 'equal':
             left, right = vals
             return Boolean(left.equals(right))
@@ -73,28 +67,13 @@ def eval_prim(op, vals, machine, location):
         case 'not':
             val = to_boolean(vals[0], location)
             return Boolean(not val)
-        case 'join':
-            ptr1, ptr2 = vals
-            ptr = ptr1.duplicate(1, location)
-            ptr.transfer(1, ptr2, location)
-            return ptr
-        case 'permission':
-            ptr = vals[0]
-            if not isinstance(ptr, Pointer):
-                error(location, "permission operation requires pointer, not "
-                      + str(ptr))
-            return Number(ptr.permission)
-        case 'upgrade':
-            ptr = vals[0]
-            b = ptr.upgrade(location)
-            return Boolean(b)
         case cmp if cmp in compare_ops.keys():
             left, right = vals
             l = to_number(left, location)
             r = to_number(right, location)
             return Boolean(compare_ops[cmp](l, r))
         case _:
-            return get_primitive_interp(op)(vals, machine, location)
+            return get_primitive_interp(op)(vals, location)
 
 
 prim_types = {'add': FunctionType(None, [], [IntType(None), IntType(None)], IntType(None), []),

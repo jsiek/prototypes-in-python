@@ -3,6 +3,7 @@ from parser import parse, set_filename
 from utilities import tracing_on
 from values import *
 from abstract_syntax import *
+from primitive_operations import eval_prim, PrimitiveCall
 
 def substitute(env, e):
   match e:
@@ -47,6 +48,24 @@ def reduce_arg(rands):
     new_rands.append(rands[i])
   return new_rands
 
+def to_value(e):
+  match e:
+    case Int(n):
+      return Number(n)
+    case Bool(b):
+      return Boolean(b)
+    case _:
+      raise Exception('unrecognized constant ' + repr(e))
+
+def from_value(v, location):
+  match v:
+    case Number(n):
+      return Int(location, n)
+    case Boolean(b):
+      return Bool(location, b)
+    case _:
+      raise Exception('unrecognized value ' + repr(v))
+
 def reduce(e):
   match e:
     case Call(rator, rands):
@@ -62,6 +81,12 @@ def reduce(e):
           return Call(rator, reduce_arg(rands))
       else:
           return Call(reduce(rator), rands)
+    case PrimitiveCall(op, args):
+      if all([is_value(arg) for arg in args]):
+        rands = [to_value(arg) for arg in args]
+        return from_value(eval_prim(op, rands, e.location), e.location)
+      else:
+        return PrimitiveCall(op, reduce_args(args))
     case _:
       raise Exception("can't reduce " + repr(e))
 
