@@ -33,7 +33,8 @@ def is_value(e):
     case _:
       return False
 
-def reduce_arg(rands):
+# Reduces the first expression in rands that can be reduced (not a value).
+def reduce_one_of(rands):
   new_rands = []
   i = 0
   while i != len(rands):
@@ -66,19 +67,22 @@ def from_value(v, location):
     case _:
       raise Exception('unrecognized value ' + repr(v))
 
+def apply_fun(rator, rands):
+  match rator:
+    case Lambda(params, body, name):
+      env = {p.ident : rand for p in params for rand in rands}
+      return substitute(env, body)
+    case _:
+      raise Exception("can't call " + repr(rator))
+    
 def reduce(e):
   match e:
     case Call(rator, rands):
       if is_value(rator):
         if all([is_value(rand) for rand in rands]):
-          match rator:
-            case Lambda(params, body, name):
-              env = {p.ident : rand for p in params for rand in rands}
-              return substitute(env, body)
-            case _:
-              raise Exception("can't call " + repr(rator))
+          return apply_fun(rator, rands)
         else:
-          return Call(rator, reduce_arg(rands))
+          return Call(rator, reduce_one_of(rands))
       else:
           return Call(reduce(rator), rands)
     case PrimitiveCall(op, args):
@@ -86,7 +90,7 @@ def reduce(e):
         rands = [to_value(arg) for arg in args]
         return from_value(eval_prim(op, rands, e.location), e.location)
       else:
-        return PrimitiveCall(op, reduce_args(args))
+        return PrimitiveCall(op, reduce_one_of(args))
     case _:
       raise Exception("can't reduce " + repr(e))
 
