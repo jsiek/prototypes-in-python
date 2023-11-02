@@ -203,11 +203,10 @@ def parse_tree_to_ast(e):
                      parse_tree_to_ast(e.children[2]))
     elif e.data == 'let_exp':
         return LetExp(e.meta,
-                          Param(e.meta, e.children[0].data,
-                                None, e.children[1].value,
-                                parse_tree_to_type(e.children[2])),
-                          parse_tree_to_ast(e.children[3]),
-                          parse_tree_to_ast(e.children[4]))
+                      Param(e.meta, e.children[0].value,
+                            parse_tree_to_type(e.children[1])),
+                      parse_tree_to_ast(e.children[2]),
+                      parse_tree_to_ast(e.children[3]))
     elif e.data == 'tag_variant':
         return TagVariant(e.meta,
                           str(e.children[0].value),

@@ -165,11 +165,8 @@ class LetExp(Exp):
     __match_args__ = ("param", "arg", "body")
 
     def __str__(self):
-        if verbose():
-            return "let " + str(self.param) + " = " + str(self.arg) + "in\n" \
-                   + str(self.body)
-        else:
-            return "let " + str(self.param) + " = " + str(self.arg) + "in ..."
+      return "let " + str(self.param) + " = " + str(self.arg) + " in " \
+        + str(self.body)
 
     def __repr__(self):
         return str(self)

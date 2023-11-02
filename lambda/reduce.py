@@ -123,6 +123,12 @@ def reduce(e):
         return Index(e.location, reduce(tup), index)
     case TupleExp(args):
       return TupleExp(e.location, reduce_one_of(args))
+    case LetExp(param, arg, body):
+      if is_value(arg):
+        env = {param.ident : arg}
+        return substitute(env, body)
+      else:
+        return LetExp(e.location, param, reduce(arg), body)
     case _:
       raise Exception("can't reduce " + repr(e))
 
@@ -140,6 +146,6 @@ if __name__ == "__main__":
   set_filename(filename)
   file = open(filename, 'r')
   p = file.read()
-  ast = parse(p, trace=False)
+  ast = parse(p, trace=True)
   print(str(ast))
   print('result: ' + str(run(ast, trace=True)))
