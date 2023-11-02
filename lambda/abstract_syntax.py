@@ -177,3 +177,39 @@ class LetExp(Exp):
     def free_vars(self):
         return self.arg.free_vars() \
                | (self.body.free_vars() - set([self.param.ident]))
+
+# Tuple Creation
+
+@dataclass
+class TupleExp(Exp):
+  inits: list[Exp]
+  __match_args__ = ("inits",)
+
+  def __str__(self):
+      return '⟨' + ', '.join([str(e) for e in self.inits]) + '⟩'
+
+  def __repr__(self):
+      return str(self)
+
+  def free_vars(self):
+      return set().union(*[init.free_vars() for init in self.inits])
+
+# Element Access
+
+@dataclass
+class Index(Exp):
+  arg: Exp
+  index: Exp
+  __match_args__ = ("arg", "index")
+  
+  def __str__(self):
+      return str(self.arg) + "[" + str(self.index) + "]"
+  
+  def __repr__(self):
+      return str(self)
+  
+  def free_vars(self):
+      return self.arg.free_vars() | self.index.free_vars()
+
+
+      

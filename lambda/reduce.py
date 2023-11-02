@@ -21,7 +21,15 @@ def substitute(env, e):
         return env[ident]
       else:
         return e
-
+    case Int(num):
+      return e
+    case Bool(b):
+      return e
+    case PrimitiveCall(op, args):
+      return PrimitiveCall(e.location, op, [substitute(env, arg) for arg in args])
+    case _:
+      raise Exception('substitute, unhandled case ' + repr(e))
+    
 def is_value(e):
   match e:
     case Lambda(params, body, name):
@@ -30,6 +38,8 @@ def is_value(e):
       return True
     case Bool(b):
       return True
+    case TupleExp(args):
+      return all([is_value(arg) for arg in args])
     case _:
       return False
 
@@ -47,6 +57,7 @@ def reduce_one_of(rands):
       break
   while i != len(rands):
     new_rands.append(rands[i])
+    i += 1
   return new_rands
 
 def to_value(e):
@@ -74,6 +85,17 @@ def apply_fun(rator, rands):
       return substitute(env, body)
     case _:
       raise Exception("can't call " + repr(rator))
+
+def tuple_get(tup, index):
+  match tup:
+    case TupleExp(elts):
+      match index:
+        case Int(n):
+          return elts[n]
+        case _:
+          raise Exception('expected an integer in tuple subscript, not ' + str(index))
+    case _:
+      raise Exception('expected a tuple in tuple subscript, not ' + str(tup))
     
 def reduce(e):
   match e:
@@ -82,21 +104,34 @@ def reduce(e):
         if all([is_value(rand) for rand in rands]):
           return apply_fun(rator, rands)
         else:
-          return Call(rator, reduce_one_of(rands))
+          return Call(e.location, rator, reduce_one_of(rands))
       else:
-          return Call(reduce(rator), rands)
+          return Call(e.location, reduce(rator), rands)
     case PrimitiveCall(op, args):
       if all([is_value(arg) for arg in args]):
         rands = [to_value(arg) for arg in args]
         return from_value(eval_prim(op, rands, e.location), e.location)
       else:
-        return PrimitiveCall(op, reduce_one_of(args))
+        return PrimitiveCall(e.location, op, reduce_one_of(args))
+    case Index(tup, index):
+      if is_value(tup):
+        if is_value(index):
+          return tuple_get(tup, index)
+        else:
+          return Index(e.location, tup, reduce(index))
+      else:
+        return Index(e.location, reduce(tup), index)
+    case TupleExp(args):
+      return TupleExp(e.location, reduce_one_of(args))
     case _:
       raise Exception("can't reduce " + repr(e))
 
-def run(e):
+def run(e, trace=False):
   while not is_value(e):
     e = reduce(e)
+    if trace:
+      print('--->')
+      print(str(e))
   return e
     
     
@@ -106,5 +141,5 @@ if __name__ == "__main__":
   file = open(filename, 'r')
   p = file.read()
   ast = parse(p, trace=False)
-  print('program: ' + str(ast))
-  print('result: ' + str(run(ast)))
+  print(str(ast))
+  print('result: ' + str(run(ast, trace=True)))
