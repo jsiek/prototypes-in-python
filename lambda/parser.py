@@ -37,23 +37,8 @@ def parse_tree_to_list(e):
         return tuple([parse_tree_to_ast(e.children[0])]) \
             + parse_tree_to_list(e.children[1])
     else:
-        raise Exception('parse_tree_to_str_list, unexpected ' + str(e))
+        raise Exception('parse_tree_to_list, unexpected ' + str(e))
     
-def parse_tree_to_str_list(e):
-    if e.data == 'nothing':
-        return tuple()
-    elif e.data == 'just':
-        return parse_tree_to_str_list(e.children[0])
-    elif e.data == 'empty':
-        return type()
-    elif e.data == 'single':
-        return tuple([e.children[0].value])
-    elif e.data == 'push':
-        return tuple([e.children[0].value]) \
-            + parse_tree_to_str_list(e.children[1])
-    else:
-        raise Exception('parse_tree_to_str_list, unexpected ' + str(e))
-
 def parse_tree_to_type(e):
     e.meta.filename = filename
     if e.data == 'nothing':

@@ -41,7 +41,9 @@ class Int(Exp):
 
   def type_check(self, env, ctx):
     return IntType(self.location), self
-    
+
+  def is_value(self):
+    return True
     
 @dataclass
 class Bool(Exp):
@@ -59,6 +61,9 @@ class Bool(Exp):
   
   def type_check(self, env, ctx):
     return BoolType(self.location), self
+
+  def is_value(self):
+    return True
   
       
 @dataclass
@@ -112,6 +117,10 @@ class Call(Exp):
         return self.fun.free_vars() \
                | set().union(*[arg.free_vars() for arg in self.args])
 
+    def is_value(self):
+      return False
+        
+      
 @dataclass(frozen=True)
 class Param:
     location: Meta
@@ -143,6 +152,9 @@ class Lambda(Exp):
         params = set([p.ident for p in self.params])
         return self.body.free_vars() - params
 
+    def is_value(self):
+      return True
+      
 @dataclass
 class Var(Exp):
     ident: str
@@ -156,7 +168,10 @@ class Var(Exp):
 
     def free_vars(self):
         return set([self.ident])
-      
+
+    def is_value(self):
+      return True
+
 @dataclass
 class LetExp(Exp):
     param: Param
@@ -175,6 +190,9 @@ class LetExp(Exp):
         return self.arg.free_vars() \
                | (self.body.free_vars() - set([self.param.ident]))
 
+    def is_value(self):
+      return False
+      
 # Tuple Creation
 
 @dataclass
@@ -191,6 +209,9 @@ class TupleExp(Exp):
   def free_vars(self):
       return set().union(*[init.free_vars() for init in self.inits])
 
+  def is_value(self):
+    return all([init.is_value() for init in self.inits])
+    
 # Element Access
 
 @dataclass
@@ -208,5 +229,6 @@ class Index(Exp):
   def free_vars(self):
       return self.arg.free_vars() | self.index.free_vars()
 
-
+  def is_value(self):
+      return False 
       

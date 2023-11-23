@@ -30,25 +30,12 @@ def substitute(env, e):
     case _:
       raise Exception('substitute, unhandled case ' + repr(e))
     
-def is_value(e):
-  match e:
-    case Lambda(params, body, name):
-      return True
-    case Int(num):
-      return True
-    case Bool(b):
-      return True
-    case TupleExp(args):
-      return all([is_value(arg) for arg in args])
-    case _:
-      return False
-
 # Reduces the first expression in rands that can be reduced (not a value).
 def reduce_one_of(rands):
   new_rands = []
   i = 0
   while i != len(rands):
-    if is_value(rands[i]):
+    if rands[i].is_value():
       new_rands.append(rands[i])
       i += 1
     else:
@@ -100,22 +87,22 @@ def tuple_get(tup, index):
 def reduce(e):
   match e:
     case Call(rator, rands):
-      if is_value(rator):
-        if all([is_value(rand) for rand in rands]):
+      if rator.is_value():
+        if all([rand.is_value() for rand in rands]):
           return apply_fun(rator, rands)
         else:
           return Call(e.location, rator, reduce_one_of(rands))
       else:
           return Call(e.location, reduce(rator), rands)
     case PrimitiveCall(op, args):
-      if all([is_value(arg) for arg in args]):
+      if all([arg.is_value() for arg in args]):
         rands = [to_value(arg) for arg in args]
         return from_value(eval_prim(op, rands, e.location), e.location)
       else:
         return PrimitiveCall(e.location, op, reduce_one_of(args))
     case Index(tup, index):
-      if is_value(tup):
-        if is_value(index):
+      if tup.is_value():
+        if index.is_value():
           return tuple_get(tup, index)
         else:
           return Index(e.location, tup, reduce(index))
@@ -124,7 +111,7 @@ def reduce(e):
     case TupleExp(args):
       return TupleExp(e.location, reduce_one_of(args))
     case LetExp(param, arg, body):
-      if is_value(arg):
+      if arg.is_value():
         env = {param.ident : arg}
         return substitute(env, body)
       else:
@@ -133,7 +120,7 @@ def reduce(e):
       raise Exception("can't reduce " + repr(e))
 
 def run(e, trace=False):
-  while not is_value(e):
+  while not e.is_value():
     e = reduce(e)
     if trace:
       print('--->')

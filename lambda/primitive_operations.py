@@ -122,3 +122,5 @@ class PrimitiveCall(Exp):
             print("type: " + str(ret))
         return ret, PrimitiveCall(self.location, self.op, cast_args)
 
+    def is_value(self):
+        return False
