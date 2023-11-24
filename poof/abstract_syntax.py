@@ -38,10 +38,18 @@ class PrimitiveCall(Term):
 @dataclass
 class Bool(Formula):
   value: bool
+  def __str__(self):
+    return str(self.value)
+  def __repr__(self):
+    return str(self.value)
 
 @dataclass
 class And(Formula):
   args: list[Formula]
+  def __str__(self):
+    return ' and '.join([str(arg) for arg in self.args])
+  def __repr__(self):
+    return str(self.value)
 
 @dataclass
 class Or(Formula):
@@ -56,6 +64,10 @@ class Compare(Formula):
 class IfThen(Formula):
   premise: Formula
   conclusion : Formula
+  def __str__(self):
+    return 'if ' + str(self.premise) + ' then ' + str(self.conclusion)
+  def __repr__(self):
+    return str(self)
 
 @dataclass
 class All(Formula):
@@ -87,6 +99,12 @@ class Apply(Proof):
   implication: Proof
   arg: Proof
 
+@dataclass
+class ImpIntro(Proof):
+  label: str
+  premise: Formula
+  body: Proof
+  
 @dataclass
 class Tuple(Proof):
   args: List[Proof]

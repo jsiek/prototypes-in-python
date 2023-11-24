@@ -1,6 +1,7 @@
 from abstract_syntax import *
 from dataclasses import dataclass
 from lark import Lark, Token, logger
+from proof_checker import check_poof
 import sys
 
 from lark import logger
@@ -34,7 +35,21 @@ def parse_tree_to_list(e):
             + parse_tree_to_list(e.children[1])
     else:
         raise Exception('parse_tree_to_str_list, unexpected ' + str(e))
-    
+
+def extract_and(frm):
+    match frm:
+      case And(loc, args):
+        return args
+      case _:
+       return [frm]
+
+def extract_or(frm):
+    match frm:
+      case Or(loc, args):
+        return args
+      case _:
+       return [frm]
+   
 def parse_tree_to_formula(e):
     e.meta.filename = filename
     if e.data == 'nothing':
@@ -49,6 +64,14 @@ def parse_tree_to_formula(e):
        return IfThen(e.meta,
                      parse_tree_to_formula(e.children[0]),
                      parse_tree_to_formula(e.children[1]))
+    elif e.data == 'and_formula':
+       left = parse_tree_to_formula(e.children[0])
+       right = parse_tree_to_formula(e.children[1])
+       return And(e.meta, extract_and(left) + extract_and(right))
+    elif e.data == 'or_formula':
+       left = parse_tree_to_formula(e.children[0])
+       right = parse_tree_to_formula(e.children[1])
+       return Or(e.meta, extract_or(left) + extract_or(right))
     elif e.data == 'all_formula':
         return All(e.meta,
                    parse_tree_to_list(e.children[0]),
@@ -88,6 +111,13 @@ def next_impl_num():
     impl_num += 1
     return ret
     
+def extract_tuple(pf):
+    match pf:
+      case Tuple(loc, pfs):
+        return pfs
+      case _:
+       return [pf]
+   
 def parse_tree_to_ast(e):
     e.meta.filename = filename
     # terms
@@ -98,12 +128,6 @@ def parse_tree_to_ast(e):
     elif e.data in primitive_ops:
         return PrimitiveCall(e.meta, e.data,
                              [parse_tree_to_ast(c) for c in e.children])
-    # formulas
-    elif e.data == 'true':
-        return Bool(e.meta, True)
-    elif e.data == 'false':
-        return Bool(e.meta, False)
-    
     # proofs
     if e.data == 'proof_var':
         return PVar(e.meta, str(e.children[0].value))
@@ -120,6 +144,19 @@ def parse_tree_to_ast(e):
                     parse_tree_to_formula(e.children[1]),
                     parse_tree_to_ast(e.children[2]),
                     parse_tree_to_ast(e.children[3]))
+    elif e.data == 'tuple':
+       left = parse_tree_to_ast(e.children[0])
+       right = parse_tree_to_ast(e.children[1])
+       return Tuple(e.meta, extract_tuple(left) + extract_tuple(right))
+    elif e.data == 'imp_intro':
+        label = str(e.children[0].value)
+        body = parse_tree_to_ast(e.children[1])
+        return ImpIntro(e.meta, label, None, body)
+    elif e.data == 'imp_intro_explicit':
+        label = str(e.children[0].value)
+        premise = parse_tree_to_formula(e.children[1])
+        body = parse_tree_to_ast(e.children[2])
+        return ImpIntro(e.meta, label, premise, body)
     elif e.data == 'cases':
         return Cases(e.meta,
                      parse_tree_to_ast(e.children[0]),
@@ -170,4 +207,5 @@ if __name__ == "__main__":
     p = file.read()
     ast = parse(p)
     print(str(ast))
-
+    check_poof(ast)
+    print(filename + ' is valid')
