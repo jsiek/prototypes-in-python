@@ -92,6 +92,7 @@ class PLet(Proof):
   
 @dataclass
 class Cases(Proof):
+  subject: Proof
   cases: List[Tuple[str,Proof]]
 
 @dataclass

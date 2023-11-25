@@ -8,6 +8,14 @@ def check_implies(loc, frm1, frm2):
     case And(loc, args):
       for arg2 in args:
         check_implies(loc, frm1, arg2)
+    case Or(loc, args):
+      for arg2 in args:
+        try:
+          check_implies(loc, frm1, arg2)
+          return
+        except:
+          pass
+      error(loc, 'expected ' + str(frm2) + '\nbut only have ' + str(frm1))
     case IfThen(loc2, prem2, conc2):
       match frm1:
         case IfThen(loc1, prem1, conc1):
@@ -26,6 +34,7 @@ def check_implies(loc, frm1, frm2):
               return
             except:
               pass
+          error(loc, 'expected ' + str(frm2) + '\nbut only have ' + str(frm1))
         case _:
           error(loc, 'expected ' + str(frm2) + '\nbut only have ' + str(frm1))
 
@@ -74,6 +83,16 @@ def check_proof_of(proof, formula, env):
       new_env = {l: f for (l,f) in env.items()}
       new_env[label] = frm
       check_proof_of(rest, formula, new_env)
+    case Cases(loc, subject, cases):
+      sub_frm = check_proof(subject, env)
+      match sub_frm:
+        case Or(loc, frms):
+          for (frm, (label,case)) in zip(frms, cases):
+            new_env = {l: f for (l,f) in env.items()}
+            new_env[label] = frm
+            check_proof_of(case, formula, new_env)
+        case _:
+          error(proof.location, "expected 'or', not " + str(sub_frm))
     case _:
       form = check_proof(proof, env)
       check_implies(proof.location, form, formula)

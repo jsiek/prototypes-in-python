@@ -207,5 +207,8 @@ if __name__ == "__main__":
     p = file.read()
     ast = parse(p)
     print(str(ast))
-    check_poof(ast)
-    print(filename + ' is valid')
+    try:
+        check_poof(ast)
+        print(filename + ' is valid')
+    except Exception as e:
+        print(str(e))
