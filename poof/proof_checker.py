@@ -63,7 +63,6 @@ def check_proof(proof, env):
       conc = check_proof(body, new_env)
       ret = IfThen(loc, prem, conc)
     case AllIntro(loc, vars, body):
-      # TODO, deal with vars
       formula = check_proof(body, env)
       ret = All(loc, vars, formula)
     case Apply(loc, imp, arg):
@@ -78,6 +77,27 @@ def check_proof(proof, env):
       error(proof.location, 'unhandled ' + str(proof))
   print('\t=> ' + str(ret))
   return ret
+
+def substitute(sub, frm):
+  match frm:
+    case TVar(loc, name):
+      if name in sub.keys():
+        return sub[name]
+      else:
+        return frm
+    case And(loc, args):
+      return And(loc, [substitute(sub, arg) for arg in args])
+    case Or(loc, args):
+      return Or(loc, [substitute(sub, arg) for arg in args])
+    case IfThen(loc, prem, conc):
+      return IfThen(loc, substitute(sub, prem), substitute(sub, conc))
+    case All(loc, vars, frm2):
+      new_sub = {x:e for (x,e) in sub.items()}
+      for var in vars:
+        new_sub[var] = TVar(loc,var)
+      return All(loc, vars, substitute(new_sub, frm2))
+    case _:
+      return frm
 
 def check_proof_of(proof, formula, env):
   print('nts: ' + str(formula) + '?')
@@ -95,7 +115,9 @@ def check_proof_of(proof, formula, env):
         case All(loc2, vars2, formula2):
           if len(vars) != len(vars2):
             error(proof.location, 'mismatch in number of variables')
-          check_proof_of(body, formula2, env)
+          sub = { var2: TVar(loc, var) for (var,var2) in zip(vars,vars2)}
+          frm2 = substitute(sub, formula2)
+          check_proof_of(body, frm2, env)
 
     case ImpIntro(loc, label, None, body):
       match formula:

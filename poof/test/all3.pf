@@ -1,10 +1,10 @@
 theorem T: all P , Q . if P and Q then Q and P
 proof
-  any P , Q {
-    suppose pq: P and Q {
-      p: P because pq;
-      q: Q because pq;
-      q , p
+  any P , R {
+    suppose pr: P and R {
+      p: P because pr;
+      r: R because pr;
+      r , p
     }
   }
 end
