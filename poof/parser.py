@@ -25,6 +25,17 @@ lark_parser = Lark(open("./Poof.lark").read(), start='program', parser='lalr',
 # Parsing Concrete to Abstract Syntax
 ##################################################
 
+def parse_tree_to_str_list(e):
+    if e.data == 'empty':
+        return tuple([])
+    elif e.data == 'single':
+        return tuple([str(e.children[0].value)])
+    elif e.data == 'push':
+        return tuple([str(e.children[0].value)]) \
+            + parse_tree_to_str_list(e.children[1])
+    else:
+        raise Exception('parse_tree_to_str_list, unexpected ' + str(e))
+
 def parse_tree_to_list(e):
     if e.data == 'empty':
         return tuple([])
@@ -49,6 +60,14 @@ def extract_or(frm):
         return args
       case _:
        return [frm]
+
+def parse_comparison(e):
+    if e.data == 'equal':
+        return Compare(e.meta, '=', [parse_tree_to_ast(e.children[0]),
+                                     parse_tree_to_ast(e.children[1])])
+    else:
+        error(e.meta, 'unhandled ' + str(e))
+        
    
 def parse_tree_to_formula(e):
     e.meta.filename = filename
@@ -58,8 +77,10 @@ def parse_tree_to_formula(e):
         return Bool(e.meta, True)
     elif e.data == 'false_formula':
         return Bool(e.meta, False)
+    elif e.data == 'term_formula':
+        return parse_tree_to_ast(e.children[0])
     elif e.data == 'comparison_formula':
-        return e
+        return parse_comparison(e.children[0])
     elif e.data == 'if_then_formula':
        return IfThen(e.meta,
                      parse_tree_to_formula(e.children[0]),
@@ -74,7 +95,7 @@ def parse_tree_to_formula(e):
        return Or(e.meta, extract_or(left) + extract_or(right))
     elif e.data == 'all_formula':
         return All(e.meta,
-                   parse_tree_to_list(e.children[0]),
+                   parse_tree_to_str_list(e.children[0]),
                    parse_tree_to_formula(e.children[1]))
     elif e.data == 'some_formula':
         return Some(e.meta,
@@ -136,6 +157,8 @@ def parse_tree_to_ast(e):
         return Apply(e.meta, parse_tree_to_ast(e1), parse_tree_to_ast(e2))
     elif e.data == 'true_proof':
         return PTrue(e.meta)
+    elif e.data == 'refl_proof':
+        return PReflexive(e.meta)
     elif e.data == 'paren':
         return parse_tree_to_ast(e.children[0])
     elif e.data == 'let':
@@ -152,6 +175,10 @@ def parse_tree_to_ast(e):
         label = str(e.children[0].value)
         body = parse_tree_to_ast(e.children[1])
         return ImpIntro(e.meta, label, None, body)
+    elif e.data == 'all_intro':
+        vars = parse_tree_to_str_list(e.children[0])
+        body = parse_tree_to_ast(e.children[1])
+        return AllIntro(e.meta, vars, body)
     elif e.data == 'imp_intro_explicit':
         label = str(e.children[0].value)
         premise = parse_tree_to_formula(e.children[1])
@@ -163,13 +190,13 @@ def parse_tree_to_ast(e):
                      parse_tree_to_case_list(e.children[1]))
 
     # lists
-    elif e.data == 'single':
-        return [parse_tree_to_ast(e.children[0])]
-    elif e.data == 'push':
-        return [parse_tree_to_ast(e.children[0])] \
-            + parse_tree_to_ast(e.children[1])
-    elif e.data == 'empty':
-        return []
+    # elif e.data == 'single':
+    #     return [parse_tree_to_ast(e.children[0])]
+    # elif e.data == 'push':
+    #     return [parse_tree_to_ast(e.children[0])] \
+    #         + parse_tree_to_ast(e.children[1])
+    # elif e.data == 'empty':
+    #     return []
 
     elif e.data == 'theorem':
         return Theorem(e.meta,
@@ -205,7 +232,7 @@ if __name__ == "__main__":
     filename = sys.argv[1]
     file = open(filename, 'r')
     p = file.read()
-    ast = parse(p)
+    ast = parse(p, trace=True)
     print(str(ast))
     try:
         check_poof(ast)

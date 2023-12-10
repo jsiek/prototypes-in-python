@@ -1,0 +1,4 @@
+theorem T: all x . x = x 
+proof
+  any x { refl }
+end

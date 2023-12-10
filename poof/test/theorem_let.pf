@@ -1,6 +1,6 @@
 theorem T: if false then false
 proof
-  suppose F1 {
+  suppose F1: false {
     L1: if false then false because suppose F2 { F2 };
     apply L1 with F1
   }  

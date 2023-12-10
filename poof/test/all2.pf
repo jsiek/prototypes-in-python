@@ -1,0 +1,4 @@
+theorem T: all p . if p then p
+proof
+  any p { suppose P: p { P } }
+end
