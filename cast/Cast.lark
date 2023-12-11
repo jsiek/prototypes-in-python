@@ -1,0 +1,9 @@
+
+%import .lambda(type, expression_hi, program, COMMENT, LINECOMMENT, WS)
+
+%extend type: "any"                                 -> dyn_type
+%extend expression_hi: expression_hi ":" type       -> cast
+
+%ignore COMMENT
+%ignore LINECOMMENT
+%ignore WS
