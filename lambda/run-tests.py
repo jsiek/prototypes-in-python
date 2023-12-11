@@ -4,7 +4,7 @@ from parser import parse, set_filename
 from utilities import tracing_on
 from values import *
 from abstract_syntax import *
-from reduce import run
+from run import run
 
 if __name__ == "__main__":
     homedir = os.getcwd()
