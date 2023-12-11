@@ -20,12 +20,15 @@ if __name__ == "__main__":
       file = open(filename, 'r')
       p = file.read()
       ast = parse(p, trace=False)
-      result = run(ast, trace=False)
+      trace = False
+      if trace:
+        print(str(ast))
+      result = run(ast, trace=trace)
       match result:
         case Int(n):
           if n != 0:
             raise Exception('test ' + filename + ' failed, result = ' + str(n))
         case _:
           raise Exception('test ' + filename + ' failed, result = ' + str(result))
-    
+    print('passed all tests')
   

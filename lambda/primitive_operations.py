@@ -88,39 +88,3 @@ prim_types = {'add': FunctionType(None, [], [IntType(None), IntType(None)], IntT
               'or': FunctionType(None, [], [BoolType(None), BoolType(None)], BoolType(None), []),
               'not': FunctionType(None, [], [BoolType(None)], BoolType(None), [])}
 
-
-@dataclass
-class PrimitiveCall(Exp):
-    op: str
-    args: list[Exp]
-    __match_args__ = ("op", "args")
-
-    def __str__(self):
-        return self.op + \
-               "(" + ", ".join([str(arg) for arg in self.args]) + ")"
-
-    def __repr__(self):
-        return str(self)
-
-    def free_vars(self):
-        return set().union(*[arg.free_vars() for arg in self.args])
-
-    def type_check(self, env, ctx):
-        if tracing_on():
-            print("starting to type checking " + str(self))
-        arg_types = []
-        new_args = []
-        for arg in self.args:
-            arg_type, new_arg = arg.type_check(env, 'none')
-            arg_types.append(arg_type)
-            new_args.append(new_arg)
-        if tracing_on():
-            print("checking primitive " + str(self.op))
-        ret, cast_args = type_check_prim(self.location, self.op, arg_types, new_args)
-        if tracing_on():
-            print("finished type checking " + str(self))
-            print("type: " + str(ret))
-        return ret, PrimitiveCall(self.location, self.op, cast_args)
-
-    def is_value(self):
-        return False

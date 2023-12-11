@@ -1,11 +1,11 @@
 from abstract_syntax import *
-from primitive_operations import PrimitiveCall
 from ast_types import *
 from collections import OrderedDict
 from dataclasses import dataclass
-from lark import Lark, Token, logger
 from typing import List, Set, Dict, Tuple
 import sys
+sys.path.append('..')
+from lark import Lark, Token, logger
 
 from lark import logger
 import logging

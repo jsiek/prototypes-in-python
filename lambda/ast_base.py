@@ -52,6 +52,9 @@ class Exp(AST):
   def type_check(self, env: dict[str,Type]) -> tuple[Type,Exp]:
     raise Exception('Exp.type_check unimplemented')
 
+  def is_value(self):
+    return False
+  
   def __str__(self):
     raise Exception('Exp.__str__ unimplemented')
   
