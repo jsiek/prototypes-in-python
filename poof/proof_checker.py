@@ -54,6 +54,9 @@ def check_proof(proof, env):
       new_env = {l: f for (l,f) in env.items()}
       new_env[label] = frm
       ret = check_proof(rest, new_env)
+    case PAnnot(loc, claim, reason):
+      check_proof_of(reason, claim, env)
+      ret = claim
     case Tuple(loc, pfs):
       frms = [check_proof(pf, env) for pf in pfs]
       ret = And(loc, frms)

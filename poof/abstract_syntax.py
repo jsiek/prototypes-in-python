@@ -111,6 +111,14 @@ class PLet(Proof):
 
   def __str__(self):
       return self.label + ': ' + str(self.proved) + ' because ' + str(self.because) + '; ' + str(self.body)
+
+@dataclass
+class PAnnot(Proof):
+  claim: Formula
+  reason: Proof
+
+  def __str__(self):
+      return 'have ' + str(self.claim) + ' because ' + str(self.reason)
   
 @dataclass
 class Cases(Proof):

@@ -4,7 +4,7 @@ proof
     suppose pr: P and R {
       p: P because pr;
       r: R because pr;
-      r , p
+      have R and P because r , p
     }
   }
 end

@@ -167,6 +167,10 @@ def parse_tree_to_ast(e):
                     parse_tree_to_formula(e.children[1]),
                     parse_tree_to_ast(e.children[2]),
                     parse_tree_to_ast(e.children[3]))
+    elif e.data == 'annot':
+        return PAnnot(e.meta,
+                      parse_tree_to_formula(e.children[0]),
+                      parse_tree_to_ast(e.children[1]))
     elif e.data == 'tuple':
        left = parse_tree_to_ast(e.children[0])
        right = parse_tree_to_ast(e.children[1])
