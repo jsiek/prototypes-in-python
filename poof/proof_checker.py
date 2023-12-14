@@ -2,7 +2,7 @@ from abstract_syntax import *
 from error import error
 
 def check_implies(loc, frm1, frm2):
-  print('check_implies? ' + str(frm1) + ' => ' + str(frm2))
+  # print('check_implies? ' + str(frm1) + ' => ' + str(frm2))
   match frm2:
     case Bool(loc, True):
       return
@@ -41,8 +41,8 @@ def check_implies(loc, frm1, frm2):
             error(loc, 'expected ' + str(frm2) + '\nbut only have ' + str(frm1))
 
 def check_proof(proof, env):
-  print('synthesize')
-  print('\t' + str(proof))
+  # print('synthesize')
+  # print('\t' + str(proof))
   ret = None
   match proof:
     case PVar(loc, name):
@@ -68,6 +68,16 @@ def check_proof(proof, env):
     case AllIntro(loc, vars, body):
       formula = check_proof(body, env)
       ret = All(loc, vars, formula)
+    case AllElim(loc, univ, args):
+      allfrm = check_proof(univ, env)
+      match allfrm:
+        case All(loc, vars, frm):
+          if len(args) == len(vars):
+            return substitute({var: arg for (var,arg) in zip(vars,args)}, frm)
+          else:
+            error(loc, 'expected ' + len(vars) + ' arguments, not ' + len(args))
+        case _:
+          error(loc, 'expected all formula to instantiate, not ' + str(allfrm))
     case Apply(loc, imp, arg):
       ifthen = check_proof(imp, env)
       match ifthen:
@@ -78,7 +88,7 @@ def check_proof(proof, env):
           error(loc, 'expected an if-then, not ' + str(ifthen))
     case _:
       error(proof.location, 'unhandled ' + str(proof))
-  print('\t=> ' + str(ret))
+  #print('\t=> ' + str(ret))
   return ret
 
 def substitute(sub, frm):
@@ -99,12 +109,14 @@ def substitute(sub, frm):
       for var in vars:
         new_sub[var] = TVar(loc,var)
       return All(loc, vars, substitute(new_sub, frm2))
+    case PrimitiveCall(loc, op, args):
+      return PrimitiveCall(loc, op, [substitute(sub, arg) for arg in args])
     case _:
       return frm
 
 def check_proof_of(proof, formula, env):
-  print('nts: ' + str(formula) + '?')
-  print('\t' + str(proof))
+  # print('nts: ' + str(formula) + '?')
+  # print('\t' + str(proof))
   match proof:
     case PReflexive(loc):
       match formula:

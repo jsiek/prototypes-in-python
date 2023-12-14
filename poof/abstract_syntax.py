@@ -36,17 +36,32 @@ class TVar(Term):
 class Int(Term):
   value: int
 
+  def __eq__(self, other):
+      return self.value == other.value
+  
   def __str__(self):
     return str(self.value)
 
 @dataclass
 class PrimitiveCall(Term):
-    op: str
-    args: list[Term]
+  op: str
+  args: list[Term]
+
+  def __str__(self):
+    return self.op + "(" + ",".join([str(arg) for arg in self.args]) + ")"
+
+  def __repr__(self):
+    return str(self.value)
+
+  def __eq__(self, other):
+      return self.op == other.op \
+          and all([arg1 == arg2 for arg1,arg2 in zip(self.args, other.args)])
 
 @dataclass
 class Bool(Formula):
   value: bool
+  def __eq__(self, other):
+      return self.value == other.value
   def __str__(self):
     return str(self.value)
   def __repr__(self):
@@ -88,7 +103,7 @@ class All(Formula):
   body: Formula
 
   def __str__(self):
-    return 'all ' + ",".join(self.vars) + '.' + str(self.body)
+    return 'all ' + ",".join(self.vars) + '. ' + str(self.body)
 
 @dataclass
 class Some(Formula):
@@ -140,7 +155,7 @@ class ImpIntro(Proof):
   body: Proof
 
   def __str__(self):
-    return 'suppose ' + str(self.label) + ':' + str(self.premise) + '{' + str(self.body) + '}'
+    return 'suppose ' + str(self.label) + ': ' + str(self.premise) + '{' + str(self.body) + '}'
 
 @dataclass
 class AllIntro(Proof):
@@ -149,6 +164,15 @@ class AllIntro(Proof):
 
   def __str__(self):
     return 'arbitrary ' + str(self.vars) + '{' + str(self.body) + '}'
+
+@dataclass
+class AllElim(Proof):
+  univ: Proof
+  args: List[Term]
+
+  def __str__(self):
+    return str(self.univ) + '[' + ','.join([str(arg) for arg in self.args]) + ']'
+
 
 @dataclass
 class Tuple(Proof):

@@ -61,14 +61,6 @@ def extract_or(frm):
       case _:
        return [frm]
 
-def parse_comparison(e):
-    if e.data == 'equal':
-        return Compare(e.meta, '=', [parse_tree_to_ast(e.children[0]),
-                                     parse_tree_to_ast(e.children[1])])
-    else:
-        error(e.meta, 'unhandled ' + str(e))
-        
-   
 def parse_tree_to_formula(e):
     e.meta.filename = filename
     if e.data == 'nothing':
@@ -79,8 +71,6 @@ def parse_tree_to_formula(e):
         return Bool(e.meta, False)
     elif e.data == 'term_formula':
         return parse_tree_to_ast(e.children[0])
-    elif e.data == 'comparison_formula':
-        return parse_comparison(e.children[0])
     elif e.data == 'if_then_formula':
        return IfThen(e.meta,
                      parse_tree_to_formula(e.children[0]),
@@ -102,7 +92,7 @@ def parse_tree_to_formula(e):
                    parse_tree_to_list(e.children[0]),
                    parse_tree_to_formula(e.children[1]))
     else:
-        raise Exception('unrecognized type annotation ' + repr(e))
+        raise Exception('unrecognized formula ' + repr(e))
     
 
 
@@ -149,6 +139,9 @@ def parse_tree_to_ast(e):
     elif e.data in primitive_ops:
         return PrimitiveCall(e.meta, e.data,
                              [parse_tree_to_ast(c) for c in e.children])
+    elif e.data == 'equal':
+        return Compare(e.meta, '=', [parse_tree_to_ast(e.children[0]),
+                                     parse_tree_to_ast(e.children[1])])
     # proofs
     if e.data == 'proof_var':
         return PVar(e.meta, str(e.children[0].value))
@@ -183,6 +176,10 @@ def parse_tree_to_ast(e):
         vars = parse_tree_to_str_list(e.children[0])
         body = parse_tree_to_ast(e.children[1])
         return AllIntro(e.meta, vars, body)
+    elif e.data == 'all_elim':
+        univ = parse_tree_to_ast(e.children[0])
+        args = parse_tree_to_list(e.children[1])
+        return AllElim(e.meta, univ, args)
     elif e.data == 'imp_intro_explicit':
         label = str(e.children[0].value)
         premise = parse_tree_to_formula(e.children[1])
@@ -236,8 +233,8 @@ if __name__ == "__main__":
     filename = sys.argv[1]
     file = open(filename, 'r')
     p = file.read()
-    ast = parse(p, trace=True)
-    print(str(ast))
+    ast = parse(p, trace=False)
+    # print(str(ast))
     try:
         check_poof(ast)
         print(filename + ' is valid')

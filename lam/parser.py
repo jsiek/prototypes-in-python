@@ -17,6 +17,10 @@ def set_filename(fname):
     global filename
     filename = fname
 
+def get_filename():
+    global filename
+    return filename
+    
 ##################################################
 # Concrete Syntax Parser
 ##################################################
@@ -39,6 +43,9 @@ def next_impl_num():
 
 class Parser:
 
+  def __init__(self, prefix):
+      self.prefix = prefix
+    
   def primitive_ops(self):
       return {'add', 'sub', 'mul', 'div', 'int_div', 'mod', 'neg', 'sqrt',
               'and', 'or', 'not',
@@ -60,20 +67,20 @@ class Parser:
       e.meta.filename = filename
       if e.data == 'nothing':
           return None
-      elif e.data == 'int_type':
+      elif e.data == self.prefix + 'int_type':
           return IntType(e.meta)
-      elif e.data == 'bool_type':
+      elif e.data == self.prefix + 'bool_type':
           return BoolType(e.meta)
-      elif e.data == 'tuple_type':
+      elif e.data == self.prefix + 'tuple_type':
           return TupleType(e.meta,
                            self.parse_tree_to_type_list(e.children[0]))
-      elif e.data == 'function_type':
+      elif e.data == self.prefix + 'function_type':
          return FunctionType(e.meta,
                              tuple(), # TODO: add type parameters
                              self.parse_tree_to_param_type_list(e.children[0]),
                              self.parse_tree_to_type(e.children[1]),
                              tuple()) # TODO: add requirements
-      elif e.data == 'variant_type':
+      elif e.data == self.prefix + 'variant_type':
           return VariantType(e.meta,
                              self.parse_tree_to_alt_list(e.children[0]))
       else:
@@ -159,7 +166,7 @@ class Parser:
       # expressions
       if e.data == 'var':
           return Var(e.meta, str(e.children[0].value))
-      elif e.data == 'int':
+      elif e.data == self.prefix + 'int':
           return Int(e.meta, int(e.children[0]))
       elif e.data == 'true':
           return Bool(e.meta, True)
