@@ -1,0 +1,18 @@
+recursive Nat = zero | suc(Nat);
+
+function add(n : Nat) : Nat -> Nat {
+  case zero: λ m { m }
+| case suc [rec]:
+    λ m { suc(rec(m)) }
+}
+
+theorem add_zero: all n. add(n)(zero) = n
+proof
+  induction Nat (all n. add(n)(zero) = n)
+  case zero:
+    have add(zero)(zero) = zero because reflexive
+  case suc(k) [IH: add(k)(zero) = k]:
+    s1: add(suc(k))(zero) = suc(add(k)(zero) because reflexive;
+    s2: suc(add(k)(zero)) = suc(k) because rewrite IH then reflexive;
+    transitive s1 s2 
+end

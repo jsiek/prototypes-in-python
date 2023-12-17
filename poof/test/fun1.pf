@@ -1,0 +1,4 @@
+theorem T: λm{m}(0) = 0
+proof
+  reflexive
+end

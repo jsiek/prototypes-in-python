@@ -272,7 +272,7 @@ class Lambda(Exp):
       new_env = env.deepcopy()
       for p in self.params:
           del new_env[p.ident]
-      return Lambda(params, self.body.substitute(new_env), name)
+      return Lambda(self.params, self.body.substitute(new_env), name)
       
     def is_value(self):
       return True

@@ -22,26 +22,44 @@ class Proof(AST):
 class Statement(AST):
     pass
   
+################ Terms ######################################
+
 @dataclass
 class TVar(Term):
   name: str
 
   def __eq__(self, other):
+      if not isinstance(other, TVar):
+          return False
       return self.name == other.name
   
   def __str__(self):
       return self.name
+
+  def substitute(self, env):
+      if self.name in env.keys():
+          return env[self.name]
+      else:
+          return self
   
 @dataclass
 class Int(Term):
   value: int
 
   def __eq__(self, other):
+      if not isinstance(other, Int):
+          return False
       return self.value == other.value
   
   def __str__(self):
     return str(self.value)
 
+  def reduce(self):
+      return self
+
+  def substitute(self, env):
+      return self
+  
 @dataclass
 class PrimitiveCall(Term):
   op: str
@@ -54,9 +72,76 @@ class PrimitiveCall(Term):
     return str(self.value)
 
   def __eq__(self, other):
+      if not isinstance(other, PrimitiveCall):
+          return False
       return self.op == other.op \
           and all([arg1 == arg2 for arg1,arg2 in zip(self.args, other.args)])
 
+  def reduce(self):
+      return self
+
+  def substitute(self, env):
+      return PrimitiveCall(self.location, self.op,
+                           [arg.substitute(env) for arg in self.args])
+  
+@dataclass
+class Lambda(Term):
+  vars: List[str]
+  body: Term
+  
+  def __str__(self):
+    return "λ" + ",".join([v for v in self.vars]) + "{" + str(self.body) + "}"
+
+  def __repr__(self):
+    return str(self.value)
+
+  def __eq__(self, other):
+      # to do: alpha-equivalence
+      if not isinstance(other, Lambda):
+          return False
+      return self.vars == other.vars and self.body == other.body
+
+  def reduce(self):
+      return self
+
+  def substitute(self, env):
+      new_env = env.deepcopy()
+      for p in self.vars:
+          del new_env[p.ident]
+      return Lambda(self.vars, self.body.substitute(new_env), name)
+      
+@dataclass
+class Call(Term):
+  rator: Term
+  args: list[Term]
+
+  def __str__(self):
+    return str(self.rator) + "(" + ",".join([str(arg) for arg in self.args]) + ")"
+
+  def __repr__(self):
+    return str(self.value)
+
+  def __eq__(self, other):
+      if not isinstance(other, Call):
+          return False
+      return self.rator == other.rator \
+          and all([arg1 == arg2 for arg1,arg2 in zip(self.args, other.args)])
+
+  def reduce(self):
+      fun = self.rator.reduce()
+      args = [arg.reduce() for arg in self.args]
+      match fun:
+        case Lambda(loc,vars, body):
+          return body.substitute({x:arg for (x,arg) in zip(vars, args)})
+        case _:
+          return Call(self.location, fun, args)
+
+  def substitute(self, env):
+      return Call(self.location, self.rator.substitute(env),
+                  [arg.substitute(env) for arg in self.args])
+
+################ Formulas ######################################
+  
 @dataclass
 class Bool(Formula):
   value: bool
@@ -81,12 +166,12 @@ class Or(Formula):
   def __str__(self):
     return ' or '.join([str(arg) for arg in self.args])
 
-@dataclass
-class Compare(Formula):
-  op: str
-  args: list[Term]
-  def __str__(self):
-      return str(self.args[0]) + ' ' + self.op + ' ' + str(self.args[1])
+# @dataclass
+# class Compare(Formula):
+#   op: str
+#   args: list[Term]
+#   def __str__(self):
+#       return str(self.args[0]) + ' ' + self.op + ' ' + str(self.args[1])
   
 @dataclass
 class IfThen(Formula):
@@ -189,7 +274,7 @@ class PTrue(Proof):
 @dataclass
 class PReflexive(Proof):
   def __str__(self):
-      return 'refl'
+      return 'reflexive'
   
 @dataclass
 class Theorem(Statement):
@@ -198,8 +283,9 @@ class Theorem(Statement):
     proof: Proof
 
     def __str__(self):
-      return 'theorem ' + self.name
+      return 'theorem ' + self.name + ': ' + str(self.what) + '\nbegin\n' \
+          + str(self.proof) + '\nend\n'
 
     def __repr__(self):
-      return 'theorem ' + self.name
+      return str(self)
     

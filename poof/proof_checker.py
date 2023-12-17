@@ -41,8 +41,8 @@ def check_implies(loc, frm1, frm2):
             error(loc, 'expected ' + str(frm2) + '\nbut only have ' + str(frm1))
 
 def check_proof(proof, env):
-  # print('synthesize')
-  # print('\t' + str(proof))
+  print('synthesize')
+  print('\t' + str(proof))
   ret = None
   match proof:
     case PVar(loc, name):
@@ -115,16 +115,18 @@ def substitute(sub, frm):
       return frm
 
 def check_proof_of(proof, formula, env):
-  # print('nts: ' + str(formula) + '?')
-  # print('\t' + str(proof))
+  print('nts: ' + str(formula) + '?')
+  print('\t' + str(proof))
   match proof:
     case PReflexive(loc):
       match formula:
-        case Compare(loc2, '=', [lhs, rhs]):
-          if lhs != rhs:
-            error(proof.location, str(lhs) + ' != ' + str(rhs))
+        case PrimitiveCall(loc2, 'equal', [lhs, rhs]):
+          lhsNF = lhs.reduce()
+          rhsNF = rhs.reduce()
+          if lhsNF != rhsNF:
+            error(proof.location, str(lhsNF) + ' != ' + str(rhsNF))
         case _:
-          error(proof.location, 'refl proves an equality, not ' + str(formula))
+          error(proof.location, 'reflexive proves an equality, not ' + str(formula))
     case AllIntro(loc, vars, body):
       match formula:
         case All(loc2, vars2, formula2):

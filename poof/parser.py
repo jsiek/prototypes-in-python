@@ -136,12 +136,17 @@ def parse_tree_to_ast(e):
         return TVar(e.meta, str(e.children[0].value))
     elif e.data == 'int':
         return Int(e.meta, int(e.children[0]))
+    elif e.data == 'call':
+        rator = parse_tree_to_ast(e.children[0])
+        rands = parse_tree_to_list(e.children[1])
+        return Call(e.meta, rator, rands)
+    elif e.data == 'lambda':
+        return Lambda(e.meta,
+                      parse_tree_to_str_list(e.children[0]),
+                      parse_tree_to_ast(e.children[1]))
     elif e.data in primitive_ops:
         return PrimitiveCall(e.meta, e.data,
                              [parse_tree_to_ast(c) for c in e.children])
-    elif e.data == 'equal':
-        return Compare(e.meta, '=', [parse_tree_to_ast(e.children[0]),
-                                     parse_tree_to_ast(e.children[1])])
     # proofs
     if e.data == 'proof_var':
         return PVar(e.meta, str(e.children[0].value))
@@ -233,7 +238,7 @@ if __name__ == "__main__":
     filename = sys.argv[1]
     file = open(filename, 'r')
     p = file.read()
-    ast = parse(p, trace=False)
+    ast = parse(p, trace=True)
     # print(str(ast))
     try:
         check_poof(ast)
