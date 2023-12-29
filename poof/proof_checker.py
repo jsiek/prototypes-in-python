@@ -57,7 +57,7 @@ def check_proof(proof, env):
     case PAnnot(loc, claim, reason):
       check_proof_of(reason, claim, env)
       ret = claim
-    case Tuple(loc, pfs):
+    case PTuple(loc, pfs):
       frms = [check_proof(pf, env) for pf in pfs]
       ret = And(loc, frms)
     case ImpIntro(loc, label, prem, body):

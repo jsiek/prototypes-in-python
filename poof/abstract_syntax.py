@@ -21,7 +21,30 @@ class Proof(AST):
 @dataclass
 class Statement(AST):
     pass
-  
+
+@dataclass
+class Type(AST):
+    pass
+
+################ Types ######################################
+
+@dataclass
+class TypeName(Type):
+    name: str
+
+@dataclass
+class IntType(Type):
+    pass
+
+@dataclass
+class BoolType(Type):
+    pass
+
+@dataclass
+class FunctionType(Type):
+    param_types: List[Type]
+    return_type: Type
+
 ################ Terms ######################################
 
 @dataclass
@@ -36,6 +59,9 @@ class TVar(Term):
   def __str__(self):
       return self.name
 
+  def reduce(self):
+      return self
+  
   def substitute(self, env):
       if self.name in env.keys():
           return env[self.name]
@@ -69,7 +95,7 @@ class PrimitiveCall(Term):
     return self.op + "(" + ",".join([str(arg) for arg in self.args]) + ")"
 
   def __repr__(self):
-    return str(self.value)
+    return str(self)
 
   def __eq__(self, other):
       if not isinstance(other, PrimitiveCall):
@@ -83,7 +109,25 @@ class PrimitiveCall(Term):
   def substitute(self, env):
       return PrimitiveCall(self.location, self.op,
                            [arg.substitute(env) for arg in self.args])
-  
+
+@dataclass
+class FieldAccess(Term):
+  subject: Term
+  field: str
+
+  def __str__(self):
+      return str(self.subject) + "." + self.field
+
+  def __repr__(self):
+    return str(self)
+
+  def reduce(self):
+      # TODO
+      return self
+
+  def substitute(self, env):
+    return FieldAccess(self.location, self.subject, self.field)
+
 @dataclass
 class Lambda(Term):
   vars: List[str]
@@ -93,7 +137,7 @@ class Lambda(Term):
     return "λ" + ",".join([v for v in self.vars]) + "{" + str(self.body) + "}"
 
   def __repr__(self):
-    return str(self.value)
+    return str(self)
 
   def __eq__(self, other):
       # to do: alpha-equivalence
@@ -119,7 +163,7 @@ class Call(Term):
     return str(self.rator) + "(" + ",".join([str(arg) for arg in self.args]) + ")"
 
   def __repr__(self):
-    return str(self.value)
+    return str(self)
 
   def __eq__(self, other):
       if not isinstance(other, Call):
@@ -150,7 +194,7 @@ class Bool(Formula):
   def __str__(self):
     return str(self.value)
   def __repr__(self):
-    return str(self.value)
+    return str(self)
 
 @dataclass
 class And(Formula):
@@ -158,7 +202,7 @@ class And(Formula):
   def __str__(self):
     return ' and '.join([str(arg) for arg in self.args])
   def __repr__(self):
-    return str(self.value)
+    return str(self)
 
 @dataclass
 class Or(Formula):
@@ -260,7 +304,7 @@ class AllElim(Proof):
 
 
 @dataclass
-class Tuple(Proof):
+class PTuple(Proof):
   args: List[Proof]
 
   def __str__(self):
@@ -289,3 +333,30 @@ class Theorem(Statement):
     def __repr__(self):
       return str(self)
     
+@dataclass
+class Struct(Statement):
+    name: str
+    fields: List[Tuple[str,Type]]
+    
+@dataclass
+class Union(Statement):
+    name: str
+    alternatives: List[Struct]
+
+@dataclass
+class RecCase(AST):
+  structName: str
+  param: str
+  body: Term
+
+@dataclass
+class RecFun(Statement):
+    name: str
+    typeName: str
+    returns: Type
+    cases: List[RecCase]
+    
+@dataclass
+class Define(Statement):
+  name: str
+  body: Term

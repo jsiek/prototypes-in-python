@@ -1,0 +1,40 @@
+// Trees can either be Empty or larger
+union Tree {
+  struct Empty { }
+  struct Node {
+    int  data;
+    Tree left;
+    Tree right;
+  }
+}
+
+rec height of Tree returns int {
+  case (Empty t) { 0 }
+  case (Node n) { 1 + max(height.left, height.right) }
+}
+
+rec sum of Tree returns int {
+  case (Empty t) { 0 }
+  case (Node n) { n.data + sum.left + sum.right }
+}
+
+/*
+     t3= 4
+       /   \
+  t1= 3     7 =t2
+     
+*/
+
+define t1 is Node(3, Empty(), Empty())
+define t2 is Node(7, Empty(), Empty())
+define t3 is Node(4, t1, t2)
+
+theorem thm1: height(t3) = 2
+proof
+  reflexive
+end
+
+theorem thm2: sum(t3) = 14
+proof
+  reflexive
+end

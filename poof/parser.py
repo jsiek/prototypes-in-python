@@ -124,18 +124,40 @@ def next_impl_num():
     
 def extract_tuple(pf):
     match pf:
-      case Tuple(loc, pfs):
+      case PTuple(loc, pfs):
         return pfs
       case _:
        return [pf]
    
+def parse_tree_to_type(e):
+    e.meta.filename = filename
+    
+    # types
+    if e.data == 'type_name':
+      return TypeName(e.meta, str(e.children[0].value))
+    elif e.data == 'int_type':
+      return IntType(e.meta)
+    elif e.data == 'bool_type':
+      return BoolType(e.meta)
+    elif e.data == 'function_type':
+      return FunctionType(e.meta,
+                          parse_tree_to_list(e.children[0]),
+                          parse_tree_to_type(e.children[1]))
+    else:
+      raise Exception('unhandled parse tree, expected a type', e)
+    
 def parse_tree_to_ast(e):
     e.meta.filename = filename
+    
     # terms
     if e.data == 'term_var':
         return TVar(e.meta, str(e.children[0].value))
     elif e.data == 'int':
         return Int(e.meta, int(e.children[0]))
+    elif e.data == 'field_access':
+        subject = parse_tree_to_ast(e.children[0])
+        field_name = str(e.children[1].value)
+        return FieldAccess(e.meta, subject, field_name)
     elif e.data == 'call':
         rator = parse_tree_to_ast(e.children[0])
         rands = parse_tree_to_list(e.children[1])
@@ -147,6 +169,7 @@ def parse_tree_to_ast(e):
     elif e.data in primitive_ops:
         return PrimitiveCall(e.meta, e.data,
                              [parse_tree_to_ast(c) for c in e.children])
+    
     # proofs
     if e.data == 'proof_var':
         return PVar(e.meta, str(e.children[0].value))
@@ -172,7 +195,7 @@ def parse_tree_to_ast(e):
     elif e.data == 'tuple':
        left = parse_tree_to_ast(e.children[0])
        right = parse_tree_to_ast(e.children[1])
-       return Tuple(e.meta, extract_tuple(left) + extract_tuple(right))
+       return PTuple(e.meta, extract_tuple(left) + extract_tuple(right))
     elif e.data == 'imp_intro':
         label = str(e.children[0].value)
         body = parse_tree_to_ast(e.children[1])
@@ -194,21 +217,45 @@ def parse_tree_to_ast(e):
         return Cases(e.meta,
                      parse_tree_to_ast(e.children[0]),
                      parse_tree_to_case_list(e.children[1]))
-
-    # lists
-    # elif e.data == 'single':
-    #     return [parse_tree_to_ast(e.children[0])]
-    # elif e.data == 'push':
-    #     return [parse_tree_to_ast(e.children[0])] \
-    #         + parse_tree_to_ast(e.children[1])
-    # elif e.data == 'empty':
-    #     return []
-
+    
+    # field declarations
+    elif e.data == 'field':
+        return (parse_tree_to_type(e.children[0]), str(e.children[1].value))
+    
+    # struct definitions
+    elif e.data == 'struct':
+        return Struct(e.meta, str(e.children[0].value),
+                              parse_tree_to_list(e.children[1]))
+    
+    # union definitions
+    elif e.data == 'union':
+        return Union(e.meta, str(e.children[0].value),
+                     parse_tree_to_list(e.children[1]))
+    
+    # theorem definitions
     elif e.data == 'theorem':
         return Theorem(e.meta,
                        str(e.children[0].value),
                        parse_tree_to_formula(e.children[1]),
                        parse_tree_to_ast(e.children[2]))
+
+    # case of a recursive function
+    elif e.data == 'rec_case':
+        return RecCase(e.meta, str(e.children[0].value),
+                       str(e.children[1].value),
+                       parse_tree_to_ast(e.children[2]))
+    # recursive functions
+    elif e.data == 'rec_fun':
+        return RecFun(e.meta, str(e.children[0].value),
+                      str(e.children[1].value),
+                      parse_tree_to_type(e.children[2]),
+                      parse_tree_to_list(e.children[3]))
+
+    # term definition
+    elif e.data == 'define':
+        return Define(e.meta, str(e.children[0].value),
+                      parse_tree_to_ast(e.children[1]))
+    
     # whole program
     elif e.data == 'program':
         return parse_tree_to_list(e.children[0])
