@@ -59,8 +59,11 @@ class TVar(Term):
   def __str__(self):
       return self.name
 
-  def reduce(self):
-      return self
+  def reduce(self, env):
+      if self.name in env:
+          return env[self.name]
+      else:
+          return self
   
   def substitute(self, env):
       if self.name in env.keys():
@@ -80,7 +83,7 @@ class Int(Term):
   def __str__(self):
     return str(self.value)
 
-  def reduce(self):
+  def reduce(self, env):
       return self
 
   def substitute(self, env):
@@ -103,7 +106,7 @@ class PrimitiveCall(Term):
       return self.op == other.op \
           and all([arg1 == arg2 for arg1,arg2 in zip(self.args, other.args)])
 
-  def reduce(self):
+  def reduce(self, env):
       return self
 
   def substitute(self, env):
@@ -121,7 +124,7 @@ class FieldAccess(Term):
   def __repr__(self):
     return str(self)
 
-  def reduce(self):
+  def reduce(self, env):
       # TODO
       return self
 
@@ -145,7 +148,7 @@ class Lambda(Term):
           return False
       return self.vars == other.vars and self.body == other.body
 
-  def reduce(self):
+  def reduce(self, env):
       return self
 
   def substitute(self, env):
@@ -153,7 +156,25 @@ class Lambda(Term):
       for p in self.vars:
           del new_env[p.ident]
       return Lambda(self.vars, self.body.substitute(new_env), name)
-      
+
+def is_match(pattern, arg, subst):
+    ret = False
+    match (pattern, arg):
+      case (PatternCons(loc1, constr, []),
+            TVar(loc2, name)):
+        ret = constr == name
+      case (PatternCons(loc1, constr, params),
+            Call(loc2, TVar(loc3, name), args)):
+        if constr == name and len(params) == len(args):
+            for (k,v) in zip(params, args):
+                subst[k] = v
+            ret = True
+        else:
+            ret = False
+      case _:
+        ret = False
+    return ret
+        
 @dataclass
 class Call(Term):
   rator: Term
@@ -171,12 +192,22 @@ class Call(Term):
       return self.rator == other.rator \
           and all([arg1 == arg2 for arg1,arg2 in zip(self.args, other.args)])
 
-  def reduce(self):
-      fun = self.rator.reduce()
-      args = [arg.reduce() for arg in self.args]
+  def reduce(self, env):
+      fun = self.rator.reduce(env)
+      args = [arg.reduce(env) for arg in self.args]
       match fun:
         case Lambda(loc,vars, body):
           return body.substitute({x:arg for (x,arg) in zip(vars, args)})
+        case RecFun(loc, name, params, returns, cases):
+          first_arg = args[0]
+          rest_args = args[1:]
+          for fun_case in cases:
+              subst = {}
+              if is_match(fun_case.pattern, first_arg, subst):
+                  for (k,v) in zip(fun_case.parameters, rest_args):
+                      subst[k] = v
+                  return fun_case.body.substitute(subst).reduce(env)
+          return Call(self.location, fun, args)
         case _:
           return Call(self.location, fun, args)
 
@@ -334,27 +365,55 @@ class Theorem(Statement):
       return str(self)
     
 @dataclass
-class Struct(Statement):
+class Constructor(Statement):
     name: str
-    fields: List[Tuple[str,Type]]
+    parameters: List[Type]
     
 @dataclass
 class Union(Statement):
     name: str
-    alternatives: List[Struct]
+    alternatives: List[Constructor]
 
 @dataclass
-class RecCase(AST):
-  structName: str
-  param: str
+class Pattern(AST):
+    pass
+
+@dataclass
+class PatternCons(Pattern):
+  constructor : str
+  parameters : List[str]
+
+  def __str__(self):
+      return self.constructor + '(' + ",".join(self.parameters) + ')'
+
+  def __repr__(self):
+      return str(self)
+  
+@dataclass
+class FunCase(AST):
+  pattern: Pattern
+  parameters: List[str]
   body: Term
 
+  def __str__(self):
+      return '(' + str(self.pattern) + ',' + ",".join(self.parameters) \
+          + ') = ' + str(self.body)
+
+  def __repr__(self):
+      return str(self)
+  
 @dataclass
 class RecFun(Statement):
     name: str
-    typeName: str
+    params: List[Type]
     returns: Type
-    cases: List[RecCase]
+    cases: List[FunCase]
+
+    def __str__(self):
+      return '`' + self.name + '`'
+
+    def __repr__(self):
+      return str(self)
     
 @dataclass
 class Define(Statement):

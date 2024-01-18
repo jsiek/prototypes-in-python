@@ -121,8 +121,9 @@ def check_proof_of(proof, formula, env):
     case PReflexive(loc):
       match formula:
         case PrimitiveCall(loc2, 'equal', [lhs, rhs]):
-          lhsNF = lhs.reduce()
-          rhsNF = rhs.reduce()
+          lhsNF = lhs.reduce(env)
+          rhsNF = rhs.reduce(env)
+          # print('reflexive: ' + str(lhsNF) + ' =? ' + str(rhsNF))
           if lhsNF != rhsNF:
             error(proof.location, str(lhsNF) + ' != ' + str(rhsNF))
         case _:
@@ -168,6 +169,8 @@ def check_statement(stmt, env):
     case Theorem(loc, name, frm, pf):
       check_proof_of(pf, frm, env)
       env[name] = frm
+    case RecFun(loc, name, params, returns, cases):
+      env[name] = stmt
     
 def check_poof(ast):
   env = {}

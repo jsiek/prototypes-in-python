@@ -1,6 +1,6 @@
 from abstract_syntax import *
 from dataclasses import dataclass
-from lark import Lark, Token, logger
+from lark import Lark, Token, Tree, logger
 from proof_checker import check_poof
 import sys
 
@@ -129,7 +129,10 @@ def extract_tuple(pf):
       case _:
        return [pf]
    
-def parse_tree_to_type(e):
+def parse_tree_to_ast(e):
+    if isinstance(e, Token):
+        return e
+    
     e.meta.filename = filename
     
     # types
@@ -142,15 +145,9 @@ def parse_tree_to_type(e):
     elif e.data == 'function_type':
       return FunctionType(e.meta,
                           parse_tree_to_list(e.children[0]),
-                          parse_tree_to_type(e.children[1]))
-    else:
-      raise Exception('unhandled parse tree, expected a type', e)
-    
-def parse_tree_to_ast(e):
-    e.meta.filename = filename
-    
+                          parse_tree_to_ast(e.children[1]))
     # terms
-    if e.data == 'term_var':
+    elif e.data == 'term_var':
         return TVar(e.meta, str(e.children[0].value))
     elif e.data == 'int':
         return Int(e.meta, int(e.children[0]))
@@ -217,15 +214,13 @@ def parse_tree_to_ast(e):
         return Cases(e.meta,
                      parse_tree_to_ast(e.children[0]),
                      parse_tree_to_case_list(e.children[1]))
-    
-    # field declarations
-    elif e.data == 'field':
-        return (parse_tree_to_type(e.children[0]), str(e.children[1].value))
-    
-    # struct definitions
-    elif e.data == 'struct':
-        return Struct(e.meta, str(e.children[0].value),
-                              parse_tree_to_list(e.children[1]))
+
+    # constructor declaratoin
+    elif e.data == 'constr_id':
+        return Constructor(e.meta, str(e.children[0].value), [])
+    elif e.data == 'constr_apply':
+        param_types = parse_tree_to_list(e.children[1])
+        return Constructor(e.meta, str(e.children[0].value), param_types)
     
     # union definitions
     elif e.data == 'union':
@@ -239,16 +234,23 @@ def parse_tree_to_ast(e):
                        parse_tree_to_formula(e.children[1]),
                        parse_tree_to_ast(e.children[2]))
 
+    # patterns in function definitions
+    elif e.data == 'pattern_id':
+        return PatternCons(e.meta, str(e.children[0].value), [])
+    elif e.data == 'pattern_apply':
+        params = parse_tree_to_str_list(e.children[1])
+        return PatternCons(e.meta, str(e.children[0].value), params)
+    
     # case of a recursive function
-    elif e.data == 'rec_case':
-        return RecCase(e.meta, str(e.children[0].value),
-                       str(e.children[1].value),
+    elif e.data == 'fun_case':
+        pp = parse_tree_to_list(e.children[1])
+        return FunCase(e.meta, pp[0], pp[1:],
                        parse_tree_to_ast(e.children[2]))
     # recursive functions
     elif e.data == 'rec_fun':
         return RecFun(e.meta, str(e.children[0].value),
-                      str(e.children[1].value),
-                      parse_tree_to_type(e.children[2]),
+                      parse_tree_to_list(e.children[1]),
+                      parse_tree_to_ast(e.children[2]),
                       parse_tree_to_list(e.children[3]))
 
     # term definition
@@ -286,7 +288,7 @@ if __name__ == "__main__":
     file = open(filename, 'r')
     p = file.read()
     ast = parse(p, trace=True)
-    # print(str(ast))
+    print(str(ast))
     try:
         check_poof(ast)
         print(filename + ' is valid')
