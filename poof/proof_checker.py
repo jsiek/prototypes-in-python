@@ -170,6 +170,7 @@ def check_statement(stmt, env):
       check_proof_of(pf, frm, env)
       env[name] = frm
     case RecFun(loc, name, params, returns, cases):
+      # TODO: check the recursive calls
       env[name] = stmt
     
 def check_poof(ast):
