@@ -219,7 +219,7 @@ def check_term(term, typ, type_env, recfun, subterms):
       if ty != typ:
         error(term.location, 'expected term of type ' + str(typ) + ' but got ' + str(ty))
 
-def check_constructor(loc, constr_name, env, tyname, params, type_env):
+def check_constructor_pattern(loc, constr_name, env, tyname, params, type_env):
   for (name,defn) in env.items():
     if name == tyname:
       match defn:
@@ -238,7 +238,7 @@ def check_pattern(pattern, typ, env, type_env):
     case PatternCons(loc, constr, params):
       match typ:
         case TypeName(loc2, name):
-          check_constructor(loc, constr, env, name, params, type_env)
+          check_constructor_pattern(loc, constr, env, name, params, type_env)
         case _:
           error(loc, 'expected ' + str(typ) + ' not ' + constr)
     case _:
