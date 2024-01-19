@@ -215,7 +215,7 @@ def parse_tree_to_ast(e):
                      parse_tree_to_ast(e.children[0]),
                      parse_tree_to_case_list(e.children[1]))
 
-    # constructor declaratoin
+    # constructor declaration
     elif e.data == 'constr_id':
         return Constructor(e.meta, str(e.children[0].value), [])
     elif e.data == 'constr_apply':
@@ -287,10 +287,10 @@ if __name__ == "__main__":
     filename = sys.argv[1]
     file = open(filename, 'r')
     p = file.read()
-    ast = parse(p, trace=True)
+    ast = parse(p, trace=False)
     print(str(ast))
     try:
         check_poof(ast)
         print(filename + ' is valid')
     except Exception as e:
-        print(str(e))
+        print('exception ' + str(e))

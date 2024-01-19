@@ -30,7 +30,19 @@ class Type(AST):
 
 @dataclass
 class TypeName(Type):
-    name: str
+  name: str
+  
+  def __str__(self):
+    return self.name
+
+  def __repr__(self):
+    return str(self)
+
+  def __eq__(self, other):
+    if not isinstance(other, TypeName):
+      return False
+    return self.name == other.name
+
 
 @dataclass
 class IntType(Type):

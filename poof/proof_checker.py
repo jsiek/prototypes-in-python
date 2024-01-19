@@ -164,17 +164,110 @@ def check_proof_of(proof, formula, env):
       form = check_proof(proof, env)
       check_implies(proof.location, form, formula)
 
-def check_statement(stmt, env):
+
+def type_check_call(loc, rator, args, type_env, recfun, subterms):
+  ty = synth_term(rator, type_env, recfun, subterms)
+  match ty:
+    case FunctionType(loc, param_types, return_type):
+      for (param_type, arg) in zip(param_types, args):
+        check_term(arg, param_type, type_env, recfun, subterms)
+      return return_type
+    case _:
+      error(loc, 'expected operator to have function type, not ' + str(ty))
+      
+def synth_term(term, type_env, recfun, subterms):
+  match term:
+    case Int(loc, value):
+      return IntType(loc)
+    case TVar(loc, name):
+      if name in type_env.keys():
+        return type_env[name]
+      else:
+        error(loc, 'undefined name ' + name)
+    case Call(loc, TVar(loc2, name), args) if name == recfun:
+      print('************* check recursive call ' + str(term))
+      match args[0]:
+        case TVar(loc3, arg_name):
+            if not (arg_name in subterms):
+              error(loc, "ill-formed recursive call, expected first argument to be " + " or ".join(subterms) + ", not " + arg_name)
+        case _:
+          error(loc, "ill-formed recursive call, expected first argument to be " + " or ".join(subterms) + ", not " + str(args[0]))
+      return type_check_call(loc, TVar(loc2,name), args, type_env, recfun, subterms)
+    case Call(loc, rator, args):
+      print('************* check non-recursive call ' + str(term))
+      return type_check_call(loc, rator, args, type_env, recfun, subterms)
+    case _:
+      error(term.location, 'cannot deduce a type for ' + str(term))
+    
+  
+def check_term(term, typ, type_env, recfun, subterms):
+  match term:
+    case PrimitiveCall(loc, op, args):
+      # TODO
+      return
+    case Lambda(loc, vars, body):
+      match typ:
+        case FunctionType(loc, param_types, return_type):
+          new_type_env = type_env.deepcopy()
+          for (x,ty) in zip(vars, param_types):
+            new_type_env[x] = ty
+          check_term(body, return_type, new_type_env, recfun, subterms)
+        case _:
+          error(loc, 'expected a term of type ' + str(typ) + ' but instead got a lambda')
+    case _:
+      ty = synth_term(term, type_env, recfun, subterms)
+      if ty != typ:
+        error(term.location, 'expected term of type ' + str(typ) + ' but got ' + str(ty))
+
+def check_constructor(loc, constr_name, env, tyname, params, type_env):
+  for (name,defn) in env.items():
+    if name == tyname:
+      match defn:
+        case Union(loc2, name, alts):
+          for constr in alts:
+            if constr.name == constr_name:
+              for (param, param_type) in zip(params, constr.parameters):
+                type_env[param] = param_type
+              return
+        case _:
+          error(loc, tyname + ' is not a union type')
+  error(loc, tyname + ' is not a union type')
+        
+def check_pattern(pattern, typ, env, type_env):
+  match pattern:
+    case PatternCons(loc, constr, params):
+      match typ:
+        case TypeName(loc2, name):
+          check_constructor(loc, constr, env, name, params, type_env)
+        case _:
+          error(loc, 'expected ' + str(typ) + ' not ' + constr)
+    case _:
+      error(pattern.location, 'expected a constructor pattern, not ' + str(pattern))
+      
+def check_statement(stmt, env, type_env):
   match stmt:
     case Theorem(loc, name, frm, pf):
       check_proof_of(pf, frm, env)
       env[name] = frm
     case RecFun(loc, name, params, returns, cases):
-      # TODO: check the recursive calls
+      type_env[name] = FunctionType(loc, params, returns)
+      for fun_case in cases:
+        check_pattern(fun_case.pattern, params[0], env, type_env)
+        for (x,typ) in zip(fun_case.parameters, params[1:]):
+          type_env[x] = typ
+        check_term(fun_case.body, returns, type_env, name, fun_case.pattern.parameters)
       env[name] = stmt
-    
+    case Union(loc, name, alts):
+      # TODO: check for well-defined types in the constructor definitions
+      env[name] = stmt
+      for constr in alts:
+        if constr.name in type_env.keys():
+          error(loc, 'duplicate constructor name: ' + constr.name)
+        type_env[constr.name] = FunctionType(constr.location, constr.parameters, TypeName(loc, name))
+      
 def check_poof(ast):
   env = {}
+  type_env = {}
   for s in ast:
-    check_statement(s, env)
+    check_statement(s, env, type_env)
   
