@@ -73,7 +73,7 @@ def check_proof(proof, env):
       match allfrm:
         case All(loc, vars, frm):
           if len(args) == len(vars):
-            return substitute({var: arg for (var,arg) in zip(vars,args)}, frm)
+            return substitute({var[0]: arg for (var,arg) in zip(vars,args)}, frm)
           else:
             error(loc, 'expected ' + len(vars) + ' arguments, not ' + len(args))
         case _:
@@ -88,7 +88,7 @@ def check_proof(proof, env):
           error(loc, 'expected an if-then, not ' + str(ifthen))
     case _:
       error(proof.location, 'unhandled ' + str(proof))
-  #print('\t=> ' + str(ret))
+  print('\t=> ' + str(ret))
   return ret
 
 def substitute(sub, frm):
@@ -107,7 +107,7 @@ def substitute(sub, frm):
     case All(loc, vars, frm2):
       new_sub = {x:e for (x,e) in sub.items()}
       for var in vars:
-        new_sub[var] = TVar(loc,var)
+        new_sub[var[0]] = TVar(loc,var[0])
       return All(loc, vars, substitute(new_sub, frm2))
     case PrimitiveCall(loc, op, args):
       return PrimitiveCall(loc, op, [substitute(sub, arg) for arg in args])
@@ -133,7 +133,7 @@ def check_proof_of(proof, formula, env):
         case All(loc2, vars2, formula2):
           if len(vars) != len(vars2):
             error(proof.location, 'mismatch in number of variables')
-          sub = { var2: TVar(loc, var) for (var,var2) in zip(vars,vars2)}
+          sub = { var2[0]: TVar(loc, var[0]) for (var,var2) in zip(vars,vars2)}
           frm2 = substitute(sub, formula2)
           check_proof_of(body, frm2, env)
 
@@ -185,7 +185,7 @@ def synth_term(term, type_env, recfun, subterms):
       else:
         error(loc, 'undefined name ' + name)
     case Call(loc, TVar(loc2, name), args) if name == recfun:
-      print('************* check recursive call ' + str(term))
+      # print('************* check recursive call ' + str(term))
       match args[0]:
         case TVar(loc3, arg_name):
             if not (arg_name in subterms):
@@ -194,7 +194,7 @@ def synth_term(term, type_env, recfun, subterms):
           error(loc, "ill-formed recursive call, expected first argument to be " + " or ".join(subterms) + ", not " + str(args[0]))
       return type_check_call(loc, TVar(loc2,name), args, type_env, recfun, subterms)
     case Call(loc, rator, args):
-      print('************* check non-recursive call ' + str(term))
+      # print('************* check non-recursive call ' + str(term))
       return type_check_call(loc, rator, args, type_env, recfun, subterms)
     case _:
       error(term.location, 'cannot deduce a type for ' + str(term))
@@ -246,6 +246,10 @@ def check_pattern(pattern, typ, env, type_env):
       
 def check_statement(stmt, env, type_env):
   match stmt:
+    case Define(loc, name, body):
+      ty = synth_term(body, type_env, None, [])
+      env[name] = body
+      type_env[name] = ty
     case Theorem(loc, name, frm, pf):
       check_proof_of(pf, frm, env)
       env[name] = frm
@@ -263,7 +267,12 @@ def check_statement(stmt, env, type_env):
       for constr in alts:
         if constr.name in type_env.keys():
           error(loc, 'duplicate constructor name: ' + constr.name)
-        type_env[constr.name] = FunctionType(constr.location, constr.parameters, TypeName(loc, name))
+        if len(constr.parameters) > 0:
+          type_env[constr.name] = FunctionType(constr.location,
+                                               constr.parameters,
+                                               TypeName(loc, name))
+        else:
+          type_env[constr.name] = TypeName(loc, name)
       
 def check_poof(ast):
   env = {}

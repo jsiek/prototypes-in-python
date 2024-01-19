@@ -1,6 +1,6 @@
-theorem T: all P , Q . if P and Q then Q and P
+theorem T: all P:bool , Q:bool . if P and Q then Q and P
 proof
-  any P , R {
+  any P:bool , R:bool {
     suppose pr: P and R {
       p: P because pr;
       r: R because pr;

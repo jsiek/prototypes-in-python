@@ -44,6 +44,16 @@ def parse_tree_to_list(e):
     elif e.data == 'push':
         return tuple([parse_tree_to_ast(e.children[0])]) \
             + parse_tree_to_list(e.children[1])
+    elif e.data == 'empty_binding':
+        return tuple([])
+    elif e.data == 'single_binding':
+        var = parse_tree_to_ast(e.children[0])
+        typ = parse_tree_to_ast(e.children[1])
+        return tuple([(var,typ)])
+    elif e.data == 'push_binding':
+        var = parse_tree_to_ast(e.children[0])
+        typ = parse_tree_to_ast(e.children[1])
+        return tuple([(var,typ)]) + parse_tree_to_list(e.children[2])
     else:
         raise Exception('parse_tree_to_str_list, unexpected ' + str(e))
 
@@ -85,7 +95,7 @@ def parse_tree_to_formula(e):
        return Or(e.meta, extract_or(left) + extract_or(right))
     elif e.data == 'all_formula':
         return All(e.meta,
-                   parse_tree_to_str_list(e.children[0]),
+                   parse_tree_to_list(e.children[0]),
                    parse_tree_to_formula(e.children[1]))
     elif e.data == 'some_formula':
         return Some(e.meta,
@@ -158,7 +168,10 @@ def parse_tree_to_ast(e):
     elif e.data == 'call':
         rator = parse_tree_to_ast(e.children[0])
         rands = parse_tree_to_list(e.children[1])
-        return Call(e.meta, rator, rands)
+        if isinstance(rator, TVar) and rator.name == 'max':
+            return PrimitiveCall(e.meta, 'max', rands)
+        else:
+            return Call(e.meta, rator, rands)
     elif e.data == 'lambda':
         return Lambda(e.meta,
                       parse_tree_to_str_list(e.children[0]),
@@ -198,7 +211,7 @@ def parse_tree_to_ast(e):
         body = parse_tree_to_ast(e.children[1])
         return ImpIntro(e.meta, label, None, body)
     elif e.data == 'all_intro':
-        vars = parse_tree_to_str_list(e.children[0])
+        vars = parse_tree_to_list(e.children[0])
         body = parse_tree_to_ast(e.children[1])
         return AllIntro(e.meta, vars, body)
     elif e.data == 'all_elim':
@@ -291,6 +304,8 @@ if __name__ == "__main__":
     print(str(ast))
     try:
         check_poof(ast)
-        print(filename + ' is valid')
+        # print(filename + ' is valid')
+        exit(0)
     except Exception as e:
         print('exception ' + str(e))
+        exit(1)

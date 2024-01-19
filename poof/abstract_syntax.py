@@ -46,11 +46,26 @@ class TypeName(Type):
 
 @dataclass
 class IntType(Type):
-    pass
+    
+  def __str__(self):
+    return 'int'
+
+  def __repr__(self):
+    return str(self)
+
+  def __eq__(self, other):
+    return isinstance(other, IntType)
 
 @dataclass
 class BoolType(Type):
-    pass
+  def __str__(self):
+    return 'bool'
+
+  def __repr__(self):
+    return str(self)
+
+  def __eq__(self, other):
+    return isinstance(other, BoolType)
 
 @dataclass
 class FunctionType(Type):
@@ -119,7 +134,19 @@ class PrimitiveCall(Term):
           and all([arg1 == arg2 for arg1,arg2 in zip(self.args, other.args)])
 
   def reduce(self, env):
-      return self
+      new_args = [arg.reduce(env) for arg in self.args]
+      ret = None
+      if self.op == 'add':
+          if all([isinstance(arg, Int) for arg in new_args]):
+              ret = Int(self.location, new_args[0].value + new_args[1].value)
+      if self.op == 'max':
+          if all([isinstance(arg, Int) for arg in new_args]):
+              ret = Int(self.location, max(new_args[0].value, new_args[1].value))
+
+      if ret == None:
+          ret = PrimitiveCall(self.location, self.op, new_args)
+      # print('reduce prim ' + str(self) + ' to ' + str(ret))
+      return ret
 
   def substitute(self, env):
       return PrimitiveCall(self.location, self.op,
@@ -209,7 +236,7 @@ class Call(Term):
       args = [arg.reduce(env) for arg in self.args]
       match fun:
         case Lambda(loc,vars, body):
-          return body.substitute({x:arg for (x,arg) in zip(vars, args)})
+          ret = body.substitute({x:arg for (x,arg) in zip(vars, args)}).reduce(env)
         case RecFun(loc, name, params, returns, cases):
           first_arg = args[0]
           rest_args = args[1:]
@@ -219,9 +246,11 @@ class Call(Term):
                   for (k,v) in zip(fun_case.parameters, rest_args):
                       subst[k] = v
                   return fun_case.body.substitute(subst).reduce(env)
-          return Call(self.location, fun, args)
+          ret = Call(self.location, fun, args)
         case _:
-          return Call(self.location, fun, args)
+          ret = Call(self.location, fun, args)
+      # print('reduce call ' + str(self) + ' to ' + str(ret))
+      return ret
 
   def substitute(self, env):
       return Call(self.location, self.rator.substitute(env),
@@ -271,15 +300,16 @@ class IfThen(Formula):
 
 @dataclass
 class All(Formula):
-  vars: list[str]
+  vars: list[Tuple[str,Type]]
   body: Formula
 
   def __str__(self):
-    return 'all ' + ",".join(self.vars) + '. ' + str(self.body)
+    return 'all ' + ",".join([v + ":" + str(t) for (v,t) in self.vars]) \
+        + '. ' + str(self.body)
 
 @dataclass
 class Some(Formula):
-  vars: list[str]
+  vars: list[Tuple[str,Type]]
   body: Formula
 
 @dataclass
@@ -331,11 +361,12 @@ class ImpIntro(Proof):
 
 @dataclass
 class AllIntro(Proof):
-  vars: List[str]
+  vars: List[Tuple[str,Type]]
   body: Proof
 
   def __str__(self):
-    return 'arbitrary ' + str(self.vars) + '{' + str(self.body) + '}'
+    return 'arbitrary ' + ",".join([x + ":" + str(t) for (x,t) in self.vars]) \
+        + '{' + str(self.body) + '}'
 
 @dataclass
 class AllElim(Proof):

@@ -1,21 +1,16 @@
-// Trees can either be Empty or larger
 union Tree {
-  struct Empty { }
-  struct Node {
-    int  data;
-    Tree left;
-    Tree right;
-  }
+  empty;
+  node(int, Tree, Tree);
 }
 
-rec height of Tree returns int {
-  case (Empty t) { 0 }
-  case (Node n) { 1 + max(height.left, height.right) }
+function height(Tree) -> int {
+  height(empty) = 0;
+  height(node(n,L,R)) = 1 + max(height(L), height(R));
 }
 
-rec sum of Tree returns int {
-  case (Empty t) { 0 }
-  case (Node n) { n.data + sum.left + sum.right }
+function sum(Tree) -> int {
+  sum(empty) = 0;
+  sum(node(n,L,R)) = n + sum(L) + sum(R);
 }
 
 /*
@@ -25,9 +20,9 @@ rec sum of Tree returns int {
      
 */
 
-define t1 is Node(3, Empty(), Empty())
-define t2 is Node(7, Empty(), Empty())
-define t3 is Node(4, t1, t2)
+define t1 is node(3, empty, empty)
+define t2 is node(7, empty, empty)
+define t3 is node(4, t1, t2)
 
 theorem thm1: height(t3) = 2
 proof

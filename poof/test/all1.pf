@@ -1,4 +1,4 @@
-theorem T: all x . x = x 
+theorem T: all x : int. x = x 
 proof
-  any x { refl }
+  any x:int { reflexive }
 end
