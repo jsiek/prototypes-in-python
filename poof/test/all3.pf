@@ -2,9 +2,9 @@ theorem T: all P:bool , Q:bool . if P and Q then Q and P
 proof
   any P:bool , R:bool {
     suppose pr: P and R {
-      p: P because pr;
-      r: R because pr;
-      have R and P because r , p
+      p: P by pr;
+      r: R by pr;
+      have R and P by r , p
     }
   }
 end
