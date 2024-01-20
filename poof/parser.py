@@ -190,6 +190,11 @@ def parse_tree_to_ast(e):
         return PTrue(e.meta)
     elif e.data == 'refl_proof':
         return PReflexive(e.meta)
+    elif e.data == 'trans_proof':
+        e1, e2 = e.children
+        eq1 = parse_tree_to_ast(e1)
+        eq2 = parse_tree_to_ast(e2)
+        return PTransitive(e.meta, eq1, eq2)
     elif e.data == 'paren':
         return parse_tree_to_ast(e.children[0])
     elif e.data == 'let':
@@ -227,7 +232,19 @@ def parse_tree_to_ast(e):
         return Cases(e.meta,
                      parse_tree_to_ast(e.children[0]),
                      parse_tree_to_case_list(e.children[1]))
-
+    elif e.data == 'induction':
+        type_name = str(e.children[0].value)
+        cases = parse_tree_to_list(e.children[1])
+        return Induction(e.meta, type_name, cases)
+    elif e.data == 'ind_case':
+        pat = parse_tree_to_ast(e.children[0])
+        body = parse_tree_to_ast(e.children[1])
+        return IndCase(e.meta, pat, body)
+    elif e.data == 'rewrite':
+        eq = parse_tree_to_ast(e.children[0])
+        body = parse_tree_to_ast(e.children[1])
+        return Rewrite(e.meta, eq, body)
+    
     # constructor declaration
     elif e.data == 'constr_id':
         return Constructor(e.meta, str(e.children[0].value), [])
@@ -301,7 +318,7 @@ if __name__ == "__main__":
     file = open(filename, 'r')
     p = file.read()
     ast = parse(p, trace=False)
-    print(str(ast))
+    # print(str(ast))
     try:
         check_poof(ast)
         # print(filename + ' is valid')

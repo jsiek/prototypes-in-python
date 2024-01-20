@@ -40,9 +40,20 @@ def check_implies(loc, frm1, frm2):
           if frm1 != frm2:
             error(loc, 'expected ' + str(frm2) + '\nbut only have ' + str(frm1))
 
+def instantiate(loc, allfrm, args):
+  match allfrm:
+    case All(loc2, vars, frm):
+      if len(args) == len(vars):
+        sub = {var[0].value: arg for (var,arg) in zip(vars,args)}
+        ret = substitute(sub, frm)
+        return ret
+      else:
+        error(loc, 'expected ' + len(vars) + ' arguments, not ' + len(args))
+    case _:
+      error(loc, 'expected all formula to instantiate, not ' + str(allfrm))
+  
 def check_proof(proof, env):
-  print('synthesize')
-  print('\t' + str(proof))
+  # print('synthesize') ; print('\t' + str(proof))
   ret = None
   match proof:
     case PVar(loc, name):
@@ -70,14 +81,7 @@ def check_proof(proof, env):
       ret = All(loc, vars, formula)
     case AllElim(loc, univ, args):
       allfrm = check_proof(univ, env)
-      match allfrm:
-        case All(loc, vars, frm):
-          if len(args) == len(vars):
-            return substitute({var[0]: arg for (var,arg) in zip(vars,args)}, frm)
-          else:
-            error(loc, 'expected ' + len(vars) + ' arguments, not ' + len(args))
-        case _:
-          error(loc, 'expected all formula to instantiate, not ' + str(allfrm))
+      return instantiate(loc, allfrm, args)
     case Apply(loc, imp, arg):
       ifthen = check_proof(imp, env)
       match ifthen:
@@ -88,35 +92,91 @@ def check_proof(proof, env):
           error(loc, 'expected an if-then, not ' + str(ifthen))
     case _:
       error(proof.location, 'unhandled ' + str(proof))
-  print('\t=> ' + str(ret))
+  # print('\t=> ' + str(ret))
   return ret
+
+def str_of_env(env):
+  return '{' + ', '.join([k + ": " + str(e) for (k,e) in env.items()]) + '}'
 
 def substitute(sub, frm):
   match frm:
+    case Int(loc, value):
+      return frm
     case TVar(loc, name):
       if name in sub.keys():
-        return sub[name]
+        ret = sub[name]
       else:
-        return frm
+        ret = frm
     case And(loc, args):
-      return And(loc, [substitute(sub, arg) for arg in args])
+      ret = And(loc, [substitute(sub, arg) for arg in args])
     case Or(loc, args):
-      return Or(loc, [substitute(sub, arg) for arg in args])
+      ret = Or(loc, [substitute(sub, arg) for arg in args])
     case IfThen(loc, prem, conc):
-      return IfThen(loc, substitute(sub, prem), substitute(sub, conc))
+      ret = IfThen(loc, substitute(sub, prem), substitute(sub, conc))
     case All(loc, vars, frm2):
       new_sub = {x:e for (x,e) in sub.items()}
       for var in vars:
         new_sub[var[0]] = TVar(loc,var[0])
-      return All(loc, vars, substitute(new_sub, frm2))
+      ret = All(loc, vars, substitute(new_sub, frm2))
     case PrimitiveCall(loc, op, args):
-      return PrimitiveCall(loc, op, [substitute(sub, arg) for arg in args])
+      ret = PrimitiveCall(loc, op, [substitute(sub, arg) for arg in args])
+    case Call(loc, rator, args):
+      ret = Call(loc, substitute(sub, rator),
+                 [substitute(sub, arg) for arg in args])
     case _:
-      return frm
+      error(frm.location, 'substitute, unhandled ' + str(frm))
+  # print('substitute ' + str(frm) + ' via ' + str_of_env(sub) \
+  #       + '\nto ' + str(ret))
+  return ret
 
+def pattern_to_term(pat):
+  match pat:
+    case PatternCons(loc, constr, params):
+      if len(params) > 1:
+        return Call(loc, TVar(loc, constr), [TVar(loc, param) for param in params])
+      else:
+        return TVar(loc, constr)
+    case _:
+      error(pat.location, "expected a pattern, not " + str(pat))
+
+def split_equation(equation):
+  match equation:
+    case PrimitiveCall(loc1, 'equal', [L, R]):
+      return (L, R)
+    case _:
+      error(loc, 'expected an equality, not ' + str(equation))
+
+def rewrite(loc, formula, equation):
+  (lhs, rhs) = split_equation(equation)
+  # print('rewrite? ' + str(formula) \
+  #       + '\nlhs:     ' + str(lhs) + ' is ' + str(formula == lhs))
+  if formula == lhs:
+    return rhs
+  match formula:
+    case TVar(loc2, name):
+      return formula
+    case And(loc2, args):
+      return And(loc2, [rewrite(loc, arg, equation) for arg in args])
+    case Or(loc2, args):
+      return Or(loc2, [rewrite(loc, arg, equation) for arg in args])
+    case IfThen(loc2, prem, conc):
+      return IfThen(loc2, rewrite(loc, prem, equation),
+                    rewrite(loc, conc, equation))
+    case All(loc2, vars, frm2):
+      # TODO, deal with variable clash
+      return All(loc2, vars, rewrite(loc, frm2, equation))
+    case PrimitiveCall(loc2, op, args):
+      return PrimitiveCall(loc2, op,
+                           [rewrite(loc, arg, equation) for arg in args])
+    case Call(loc2, rator, args):
+      return Call(loc2, rewrite(loc, rator, equation),
+                  [rewrite(loc, arg, equation) for arg in args])
+    case _:
+      error(loc, 'rewrite, unhandled ' + str(formula))
+      
 def check_proof_of(proof, formula, env):
-  print('nts: ' + str(formula) + '?')
-  print('\t' + str(proof))
+  # print('nts: ' + str(formula) + '?')
+  # print('\t' + str(proof))
   match proof:
     case PReflexive(loc):
       match formula:
@@ -127,7 +187,17 @@ def check_proof_of(proof, formula, env):
           if lhsNF != rhsNF:
             error(proof.location, str(lhsNF) + ' != ' + str(rhsNF))
         case _:
-          error(proof.location, 'reflexive proves an equality, not ' + str(formula))
+          error(proof.location, 'reflexive proves an equality, not ' \
+                + str(formula))
+    case PTransitive(loc, eq_pf1, eq_pf2):
+      eq1 = check_proof(eq_pf1, env)
+      eq2 = check_proof(eq_pf2, env)
+      (a,b1) = split_equation(eq1)
+      (b2,c) = split_equation(eq2)
+      if b1 != b2:
+        error(loc, 'for transitive, ' + str(b1) + ' != ' + str(b2))
+      return PrimitiveCall(loc, 'equal', [a,c])
+      
     case AllIntro(loc, vars, body):
       match formula:
         case All(loc2, vars2, formula2):
@@ -160,6 +230,37 @@ def check_proof_of(proof, formula, env):
             check_proof_of(case, formula, new_env)
         case _:
           error(proof.location, "expected 'or', not " + str(sub_frm))
+    case Induction(loc, type_name, cases):
+      match env[type_name]:
+        case Union(loc2, name, alts):
+          for (constr,indcase) in zip(alts, cases):
+            #print('induction case ' + str(indcase.pattern))
+            if indcase.pattern.constructor != constr.name:
+              error(indcase.location, "expected a case for " + constr.name \
+                    + " not " + indcase.pattern.constructor)
+            if len(indcase.pattern.parameters) != len(constr.parameters):
+              error(indcase.location, "expected " + len(constr.parameters) \
+                    + " arguments to " + constr.name \
+                    + " not " + len(indcase.pattern.parameters))
+            induction_hypotheses = [instantiate(loc, formula, [TVar(loc,param)])
+                                    for param in indcase.pattern.parameters]
+            if len(induction_hypotheses) > 1:
+              induction_hypotheses = And(indcase.location, induction_hypotheses)
+            elif len(induction_hypotheses) == 1:
+              induction_hypotheses = induction_hypotheses[0]
+            new_env = {x: v for (x,v) in env.items()}
+            new_env['IH'] = induction_hypotheses
+            goal = instantiate(loc, formula, [pattern_to_term(indcase.pattern)])
+            # print('induction goal is ' + str(goal))
+            check_proof_of(indcase.body, goal, new_env)
+        case _:
+          error(loc, "induction expected name of union, not " + type_name)
+    case Rewrite(loc, equation_proof, body):
+      equation = check_proof(equation_proof, env)
+      new_formula = rewrite(loc, formula, equation)
+      # print('rewrite goal using equation ' + str(equation) \
+      #       + '\nfrom ' + str(formula) + '\nto   ' + str(new_formula))
+      check_proof_of(body, new_formula, env)
     case _:
       form = check_proof(proof, env)
       check_implies(proof.location, form, formula)
@@ -189,9 +290,11 @@ def synth_term(term, type_env, recfun, subterms):
       match args[0]:
         case TVar(loc3, arg_name):
             if not (arg_name in subterms):
-              error(loc, "ill-formed recursive call, expected first argument to be " + " or ".join(subterms) + ", not " + arg_name)
+              error(loc, "ill-formed recursive call, expected first argument to be " \
+                    + " or ".join(subterms) + ", not " + arg_name)
         case _:
-          error(loc, "ill-formed recursive call, expected first argument to be " + " or ".join(subterms) + ", not " + str(args[0]))
+          error(loc, "ill-formed recursive call, expected first argument to be " \
+                + " or ".join(subterms) + ", not " + str(args[0]))
       return type_check_call(loc, TVar(loc2,name), args, type_env, recfun, subterms)
     case Call(loc, rator, args):
       # print('************* check non-recursive call ' + str(term))

@@ -19,6 +19,7 @@ default:
 	/opt/homebrew/bin/python3.10 ./parser.py test/fun1.pf
 	/opt/homebrew/bin/python3.10 ./parser.py test/inst1.pf
 	/opt/homebrew/bin/python3.10 ./parser.py test/bintree.pf
+	/opt/homebrew/bin/python3.10 ./parser.py test/induction1.pf
 
 # TODO
-# induction1.pf
+

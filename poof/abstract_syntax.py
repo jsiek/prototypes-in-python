@@ -81,7 +81,8 @@ class TVar(Term):
   def __eq__(self, other):
       if not isinstance(other, TVar):
           return False
-      return self.name == other.name
+      ret = self.name == other.name
+      return ret
   
   def __str__(self):
       return self.name
@@ -122,7 +123,7 @@ class PrimitiveCall(Term):
   args: list[Term]
 
   def __str__(self):
-    return self.op + "(" + ",".join([str(arg) for arg in self.args]) + ")"
+    return "." + self.op + ".(" + ",".join([str(arg) for arg in self.args]) + ")"
 
   def __repr__(self):
     return str(self)
@@ -145,7 +146,6 @@ class PrimitiveCall(Term):
 
       if ret == None:
           ret = PrimitiveCall(self.location, self.op, new_args)
-      # print('reduce prim ' + str(self) + ' to ' + str(ret))
       return ret
 
   def substitute(self, env):
@@ -228,8 +228,9 @@ class Call(Term):
   def __eq__(self, other):
       if not isinstance(other, Call):
           return False
-      return self.rator == other.rator \
+      ret = self.rator == other.rator \
           and all([arg1 == arg2 for arg1,arg2 in zip(self.args, other.args)])
+      return ret
 
   def reduce(self, env):
       fun = self.rator.reduce(env)
@@ -312,6 +313,25 @@ class Some(Formula):
   vars: list[Tuple[str,Type]]
   body: Formula
 
+################ Patterns ######################################
+
+@dataclass
+class Pattern(AST):
+    pass
+
+@dataclass
+class PatternCons(Pattern):
+  constructor : str
+  parameters : List[str]
+
+  def __str__(self):
+      return self.constructor + '(' + ",".join(self.parameters) + ')'
+
+  def __repr__(self):
+      return str(self)
+  
+################ Proofs ######################################
+  
 @dataclass
 class PVar(Proof):
   name: str
@@ -393,6 +413,36 @@ class PTrue(Proof):
 class PReflexive(Proof):
   def __str__(self):
       return 'reflexive'
+
+@dataclass
+class PTransitive(Proof):
+  first: Proof
+  second: Proof
+  def __str__(self):
+      return 'transitive'
+  
+@dataclass
+class IndCase(AST):
+  pattern: Pattern
+  body: Proof
+    
+@dataclass
+class Induction(Proof):
+  typ: str
+  cases: List[IndCase]
+
+  def __str__(self):
+      return 'induction'
+
+@dataclass
+class Rewrite(Proof):
+  equation: Proof
+  body: Proof
+
+  def __str__(self):
+      return 'rewrite'
+  
+################ Statements ######################################
   
 @dataclass
 class Theorem(Statement):
@@ -408,7 +458,7 @@ class Theorem(Statement):
       return str(self)
     
 @dataclass
-class Constructor(Statement):
+class Constructor(AST):
     name: str
     parameters: List[Type]
     
@@ -417,21 +467,6 @@ class Union(Statement):
     name: str
     alternatives: List[Constructor]
 
-@dataclass
-class Pattern(AST):
-    pass
-
-@dataclass
-class PatternCons(Pattern):
-  constructor : str
-  parameters : List[str]
-
-  def __str__(self):
-      return self.constructor + '(' + ",".join(self.parameters) + ')'
-
-  def __repr__(self):
-      return str(self)
-  
 @dataclass
 class FunCase(AST):
   pattern: Pattern
@@ -457,7 +492,10 @@ class RecFun(Statement):
 
     def __repr__(self):
       return str(self)
-    
+
+    def __eq__(self, other):
+        return self.name == other.name
+  
 @dataclass
 class Define(Statement):
   name: str
