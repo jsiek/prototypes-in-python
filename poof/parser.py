@@ -201,6 +201,10 @@ def parse_tree_to_ast(e):
         eq1 = parse_tree_to_ast(e1)
         eq2 = parse_tree_to_ast(e2)
         return PTransitive(e.meta, eq1, eq2)
+    elif e.data == 'injective_proof':
+        e1 = e.children[0]
+        eq1 = parse_tree_to_ast(e1)
+        return PInjective(e.meta, eq1)
     elif e.data == 'paren':
         return parse_tree_to_ast(e.children[0])
     elif e.data == 'let':
@@ -327,7 +331,7 @@ if __name__ == "__main__":
     # print(str(ast))
     try:
         check_poof(ast)
-        # print(filename + ' is valid')
+        print(filename + ' is valid')
         exit(0)
     except Exception as e:
         print('exception ' + str(e))

@@ -53,9 +53,11 @@ def instantiate(loc, allfrm, args):
       error(loc, 'expected all formula to instantiate, not ' + str(allfrm))
   
 def check_proof(proof, env):
-  print('synthesize') ; print('\t' + str(proof))
+#  print('synthesize') ; print('\t' + str(proof))
   ret = None
   match proof:
+    case PHole(loc):
+      error(loc, 'unfinished proof')
     case PVar(loc, name):
       ret = env[name]
     case PTrue(loc):
@@ -90,8 +92,19 @@ def check_proof(proof, env):
           ret = conc
         case _:
           error(loc, 'expected an if-then, not ' + str(ifthen))
+    case PInjective(loc, eq_pf):
+      formula = check_proof(eq_pf, env)
+      (a,b) = split_equation(loc, formula)
+      match (a,b):
+        case (Call(loc2,TVar(loc3,f1),[arg1]),
+              Call(loc4,TVar(loc5,f2),[arg2])):
+          if f1 != f2:
+            error(loc, 'in injective, ' + f1 + ' != ' + f2)
+          return PrimitiveCall(loc, 'equal', [arg1, arg2])
+        case _:
+          error(loc, 'in injective, non-applicable formula: ' + str(formula))
     case _:
-      error(proof.location, 'unhandled ' + str(proof))
+      error(proof.location, 'in check_proof, unhandled ' + str(proof))
   # print('\t=> ' + str(ret))
   return ret
 
@@ -124,7 +137,7 @@ def substitute(sub, frm):
       ret = Call(loc, substitute(sub, rator),
                  [substitute(sub, arg) for arg in args])
     case _:
-      error(frm.location, 'substitute, unhandled ' + str(frm))
+      error(frm.location, 'in substitute, unhandled ' + str(frm))
   # print('substitute ' + str(frm) + ' via ' + str_of_env(sub) \
   #       + '\nto ' + str(ret))
   return ret
@@ -139,7 +152,7 @@ def pattern_to_term(pat):
     case _:
       error(pat.location, "expected a pattern, not " + str(pat))
 
-def split_equation(equation):
+def split_equation(loc, equation):
   match equation:
     case PrimitiveCall(loc1, 'equal', [L, R]):
       return (L, R)
@@ -147,7 +160,7 @@ def split_equation(equation):
       error(loc, 'expected an equality, not ' + str(equation))
 
 def rewrite(loc, formula, equation):
-  (lhs, rhs) = split_equation(equation)
+  (lhs, rhs) = split_equation(loc, equation)
   # print('rewrite? ' + str(formula) \
   #       + '\nlhs:     ' + str(lhs) + ' is ' + str(formula == lhs))
   if formula == lhs:
@@ -172,11 +185,11 @@ def rewrite(loc, formula, equation):
       return Call(loc2, rewrite(loc, rator, equation),
                   [rewrite(loc, arg, equation) for arg in args])
     case _:
-      error(loc, 'rewrite, unhandled ' + str(formula))
-      
+      error(loc, 'in rewrite, unhandled ' + str(formula))
+
 def check_proof_of(proof, formula, env):
-  print('nts: ' + str(formula) + '?')
-  print('\t' + str(proof))
+  # print('nts: ' + str(formula) + '?')
+  # print('\t' + str(proof))
   match proof:
     case PHole(loc):
       error(loc, 'unfinished proof:\n' + str(formula))
@@ -194,18 +207,25 @@ def check_proof_of(proof, formula, env):
                 + str(formula))
           
     case PSymmetric(loc, eq_pf):
-      (a,b) = split_equation(formula)
+      (a,b) = split_equation(loc, formula)
       flip_formula = PrimitiveCall(loc, 'equal', [b,a])
       check_proof_of(eq_pf, flip_formula, env)
 
     case PTransitive(loc, eq_pf1, eq_pf2):
-      (a1,c) = split_equation(formula)
+      (a1,c) = split_equation(loc, formula)
       eq1 = check_proof(eq_pf1, env)
-      (a2,b) = split_equation(eq1)
+      (a2,b) = split_equation(loc, eq1)
       check_proof_of(eq_pf2, PrimitiveCall(loc, 'equal', [b,c]), env)
       if a1 != a2:
         error(loc, 'for transitive, ' + str(a1) + ' != ' + str(a2))
-    
+
+    case PInjective(loc, eq_pf):
+      (a,b) = split_equation(loc, formula)
+      flip_formula = PrimitiveCall(loc, 'equal',
+                                   [Call(loc, TVar(loc,'suc'), [a]),
+                                    Call(loc, TVar(loc,'suc'), [b])])
+      check_proof_of(eq_pf, flip_formula, env)
+        
     case AllIntro(loc, vars, body):
       match formula:
         case All(loc2, vars2, formula2):
@@ -223,6 +243,18 @@ def check_proof_of(proof, formula, env):
           check_proof_of(body, conc, new_env)
         case _:
           error(proof.location, 'expected proof of if-then, not ' + str(proof))
+    case ImpIntro(loc, label, prem1, body):
+      match formula:
+        case IfThen(loc, prem2, conc):
+          new_env = {l: f for (l,f) in env.items()}
+          new_env[label] = prem2
+          if prem1.reduce(env) != prem2.reduce(env):
+            error(loc, 'mismatch in premise:\n' \
+                  + str(prem1) + ' != ' + str(prem2))
+          check_proof_of(body, conc, new_env)
+        case _:
+          error(proof.location, 'expected proof of if-then, not ' + str(proof))
+      
     case PLet(loc, label, frm, reason, rest):
       check_proof_of(reason, frm, env)
       new_env = {l: f for (l,f) in env.items()}
@@ -259,7 +291,7 @@ def check_proof_of(proof, formula, env):
             new_env = {x: v for (x,v) in env.items()}
             new_env['IH'] = induction_hypotheses
             goal = instantiate(loc, formula, [pattern_to_term(indcase.pattern)])
-            print('induction goal is ' + str(goal))
+            # print('induction goal is ' + str(goal))
             check_proof_of(indcase.body, goal, new_env)
         case _:
           error(loc, "induction expected name of union, not " + type_name)

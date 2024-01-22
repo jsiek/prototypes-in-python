@@ -274,6 +274,9 @@ class Bool(Formula):
   def __repr__(self):
     return str(self)
 
+  def reduce(self, env):
+    return self
+
 @dataclass
 class And(Formula):
   args: list[Formula]
@@ -281,12 +284,20 @@ class And(Formula):
     return ' and '.join([str(arg) for arg in self.args])
   def __repr__(self):
     return str(self)
+  def __eq__(self, other):
+      return all([arg1 == arg2 for arg1,arg2 in zip(self.args, other.args)])
+  def reduce(self, env):
+    return And(self.location, [arg.reduce(env) for arg in self.args])
 
 @dataclass
 class Or(Formula):
   args: list[Formula]
   def __str__(self):
     return ' or '.join([str(arg) for arg in self.args])
+  def __eq__(self, other):
+      return all([arg1 == arg2 for arg1,arg2 in zip(self.args, other.args)])
+  def reduce(self, env):
+    return Or(self.location, [arg.reduce(env) for arg in self.args])
 
 # @dataclass
 # class Compare(Formula):
@@ -436,6 +447,12 @@ class PTransitive(Proof):
   second: Proof
   def __str__(self):
       return 'transitive'
+
+@dataclass
+class PInjective(Proof):
+  body: Proof
+  def __str__(self):
+      return 'injective'
   
 @dataclass
 class IndCase(AST):
@@ -511,7 +528,10 @@ class RecFun(Statement):
 
     def __eq__(self, other):
         return self.name == other.name
-  
+
+    def reduce(self, env):
+        return self
+    
 @dataclass
 class Define(Statement):
   name: str
