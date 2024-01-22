@@ -188,8 +188,14 @@ def parse_tree_to_ast(e):
         return Apply(e.meta, parse_tree_to_ast(e1), parse_tree_to_ast(e2))
     elif e.data == 'true_proof':
         return PTrue(e.meta)
+    elif e.data == 'hole_proof':
+        return PHole(e.meta)
     elif e.data == 'refl_proof':
         return PReflexive(e.meta)
+    elif e.data == 'sym_proof':
+        e1 = e.children[0]
+        eq1 = parse_tree_to_ast(e1)
+        return PSymmetric(e.meta, eq1)
     elif e.data == 'trans_proof':
         e1, e2 = e.children
         eq1 = parse_tree_to_ast(e1)

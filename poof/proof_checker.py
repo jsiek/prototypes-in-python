@@ -53,7 +53,7 @@ def instantiate(loc, allfrm, args):
       error(loc, 'expected all formula to instantiate, not ' + str(allfrm))
   
 def check_proof(proof, env):
-  # print('synthesize') ; print('\t' + str(proof))
+  print('synthesize') ; print('\t' + str(proof))
   ret = None
   match proof:
     case PVar(loc, name):
@@ -132,7 +132,7 @@ def substitute(sub, frm):
 def pattern_to_term(pat):
   match pat:
     case PatternCons(loc, constr, params):
-      if len(params) > 1:
+      if len(params) > 0:
         return Call(loc, TVar(loc, constr), [TVar(loc, param) for param in params])
       else:
         return TVar(loc, constr)
@@ -175,9 +175,12 @@ def rewrite(loc, formula, equation):
       error(loc, 'rewrite, unhandled ' + str(formula))
       
 def check_proof_of(proof, formula, env):
-  # print('nts: ' + str(formula) + '?')
-  # print('\t' + str(proof))
+  print('nts: ' + str(formula) + '?')
+  print('\t' + str(proof))
   match proof:
+    case PHole(loc):
+      error(loc, 'unfinished proof:\n' + str(formula))
+    
     case PReflexive(loc):
       match formula:
         case PrimitiveCall(loc2, 'equal', [lhs, rhs]):
@@ -189,15 +192,20 @@ def check_proof_of(proof, formula, env):
         case _:
           error(proof.location, 'reflexive proves an equality, not ' \
                 + str(formula))
+          
+    case PSymmetric(loc, eq_pf):
+      (a,b) = split_equation(formula)
+      flip_formula = PrimitiveCall(loc, 'equal', [b,a])
+      check_proof_of(eq_pf, flip_formula, env)
+
     case PTransitive(loc, eq_pf1, eq_pf2):
+      (a1,c) = split_equation(formula)
       eq1 = check_proof(eq_pf1, env)
-      eq2 = check_proof(eq_pf2, env)
-      (a,b1) = split_equation(eq1)
-      (b2,c) = split_equation(eq2)
-      if b1 != b2:
-        error(loc, 'for transitive, ' + str(b1) + ' != ' + str(b2))
-      return PrimitiveCall(loc, 'equal', [a,c])
-      
+      (a2,b) = split_equation(eq1)
+      check_proof_of(eq_pf2, PrimitiveCall(loc, 'equal', [b,c]), env)
+      if a1 != a2:
+        error(loc, 'for transitive, ' + str(a1) + ' != ' + str(a2))
+    
     case AllIntro(loc, vars, body):
       match formula:
         case All(loc2, vars2, formula2):
@@ -251,7 +259,7 @@ def check_proof_of(proof, formula, env):
             new_env = {x: v for (x,v) in env.items()}
             new_env['IH'] = induction_hypotheses
             goal = instantiate(loc, formula, [pattern_to_term(indcase.pattern)])
-            # print('induction goal is ' + str(goal))
+            print('induction goal is ' + str(goal))
             check_proof_of(indcase.body, goal, new_env)
         case _:
           error(loc, "induction expected name of union, not " + type_name)

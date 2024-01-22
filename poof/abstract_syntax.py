@@ -123,7 +123,12 @@ class PrimitiveCall(Term):
   args: list[Term]
 
   def __str__(self):
-    return "." + self.op + ".(" + ",".join([str(arg) for arg in self.args]) + ")"
+    if self.op == 'equal':
+        return str(self.args[0]) + " = " + str(self.args[1])
+    elif self.op == 'add':
+        return str(self.args[0]) + " + " + str(self.args[1])
+    else:
+      return "." + self.op + ".(" + ",".join([str(arg) for arg in self.args]) + ")"
 
   def __repr__(self):
     return str(self)
@@ -413,6 +418,17 @@ class PTrue(Proof):
 class PReflexive(Proof):
   def __str__(self):
       return 'reflexive'
+
+@dataclass
+class PHole(Proof):
+  def __str__(self):
+      return '?'
+  
+@dataclass
+class PSymmetric(Proof):
+  body: Proof
+  def __str__(self):
+      return 'symmetric'
 
 @dataclass
 class PTransitive(Proof):
