@@ -1,0 +1,59 @@
+union Nat {
+  zero;
+  suc(Nat);
+}
+
+function add(Nat,Nat) -> Nat {
+  add(zero, m) = m;
+  add(suc(n), m) = suc(add(n, m));
+}
+
+theorem add_zero: all n:Nat. add(n, zero) = n
+proof
+  induction Nat
+  case zero {
+    have add(zero, zero) = zero by reflexive
+  }
+  case suc(k) {
+    transitive have add(suc(k), zero) = suc(add(k, zero)) by reflexive
+               have suc(add(k, zero)) = suc(k) by rewrite IH then reflexive
+  }
+end
+
+theorem add_suc: all m:Nat. all n:Nat. add(m, suc(n)) = suc(add(m,n))
+proof
+  induction Nat
+  case zero {
+    any n : Nat {
+      reflexive
+    }
+  }
+  case suc(k) {
+    any n : Nat {
+      have add(suc(k),suc(n)) = suc(add(suc(k),n)) by
+      transitive have add(suc(k),suc(n)) = suc(add(k,suc(n))) by reflexive
+      transitive have suc(add(k,suc(n))) = suc(suc(add(k,n))) by rewrite IH[n] then reflexive
+                 have suc(suc(add(k,n))) = suc(add(suc(k),n)) by reflexive
+    }
+  }
+end  
+
+theorem add_commute: all n:Nat. all m:Nat. add(n,m) = add(m,n)
+proof
+  induction Nat
+  case zero {
+    any m : Nat {
+      have add(zero,m) = add(m,zero) by
+      transitive have add(zero,m) = m by reflexive
+                 have m = add(m,zero) by symmetric add_zero[m]
+    }
+  }
+  case suc(k) {
+    any m : Nat {
+      have add(suc(k),m) = add(m,suc(k)) by
+      transitive have add(suc(k),m) = suc(add(k,m)) by reflexive
+      transitive have suc(add(k,m)) = suc(add(m,k)) by rewrite IH[m] then reflexive
+                 have suc(add(m,k)) = add(m,suc(k)) by symmetric add_suc[m][k]
+    }
+  }
+end
