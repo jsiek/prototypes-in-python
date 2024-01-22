@@ -100,6 +100,8 @@ def check_proof(proof, env):
               Call(loc4,TVar(loc5,f2),[arg2])):
           if f1 != f2:
             error(loc, 'in injective, ' + f1 + ' != ' + f2)
+          if not is_constructor(f1, env):
+            error(loc, 'in injective, ' + f1 + ' not a constructor')
           return PrimitiveCall(loc, 'equal', [arg1, arg2])
         case _:
           error(loc, 'in injective, non-applicable formula: ' + str(formula))
@@ -362,6 +364,17 @@ def check_term(term, typ, type_env, recfun, subterms):
       if ty != typ:
         error(term.location, 'expected term of type ' + str(typ) + ' but got ' + str(ty))
 
+def is_constructor(constr_name, env):
+  for (name,defn) in env.items():
+    match defn:
+      case Union(loc2, name, alts):
+        for constr in alts:
+          if constr.name == constr_name:
+            return True
+      case _:
+        continue
+  return False
+        
 def check_constructor_pattern(loc, constr_name, env, tyname, params, type_env):
   for (name,defn) in env.items():
     if name == tyname:
