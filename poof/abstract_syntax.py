@@ -2,6 +2,9 @@ from dataclasses import dataclass
 from lark.tree import Meta
 from typing import Any, Tuple, List
 
+def copy_dict(d):
+  return {k:v for k,v in d.items()}
+
 @dataclass
 class AST:
     location: Meta
@@ -72,6 +75,23 @@ class FunctionType(Type):
     param_types: List[Type]
     return_type: Type
 
+################ Patterns ######################################
+
+@dataclass
+class Pattern(AST):
+    pass
+
+@dataclass
+class PatternCons(Pattern):
+  constructor : str
+  parameters : List[str]
+
+  def __str__(self):
+      return self.constructor + '(' + ",".join(self.parameters) + ')'
+
+  def __repr__(self):
+      return str(self)
+  
 ################ Terms ######################################
 
 @dataclass
@@ -196,7 +216,7 @@ class Lambda(Term):
       return self
 
   def substitute(self, env):
-      new_env = env.deepcopy()
+      new_env = copy_dict(env)
       for p in self.vars:
           del new_env[p.ident]
       return Lambda(self.vars, self.body.substitute(new_env), name)
@@ -262,6 +282,50 @@ class Call(Term):
       return Call(self.location, self.rator.substitute(env),
                   [arg.substitute(env) for arg in self.args])
 
+@dataclass
+class SwitchCase(AST):
+  pattern: Pattern
+  body: Term
+  
+  def __str__(self):
+      return 'case ' + str(self.pattern) + '{' + str(self.body) + '}'
+
+  def __repr__(self):
+      return str(self)
+
+  def substitute(self, env):
+      new_env = copy_dict(env)
+      for x in self.pattern.parameters:
+          new_env[x] = TVar(self.location, x)
+      return SwitchCase(self.location, self.pattern,
+                        self.body.substitute(new_env))
+  
+@dataclass
+class Switch(Term):
+  subject: Term
+  cases: List[SwitchCase]
+
+  def __str__(self):
+      return 'switch ' + str(self.subject) + '{ ' \
+          + ' '.join([str(c) for c in self.cases]) \
+          + ' }'
+
+  def __repr__(self):
+      return str(self)
+  
+  def reduce(self, env):
+      new_subject = self.subject.reduce(env)
+      for c in self.cases:
+          subst = {}
+          if is_match(c.pattern, new_subject, subst):
+              return c.body.substitute(subst).reduce(env)
+      return Switch(self.location, new_subject, self.cases)
+  
+  def substitute(self, env):
+      return Switch(self.location, self.subject.substitute(env),
+                    [c.substitute(env) for c in self.cases])
+  
+  
 ################ Formulas ######################################
   
 @dataclass
@@ -329,23 +393,6 @@ class Some(Formula):
   vars: list[Tuple[str,Type]]
   body: Formula
 
-################ Patterns ######################################
-
-@dataclass
-class Pattern(AST):
-    pass
-
-@dataclass
-class PatternCons(Pattern):
-  constructor : str
-  parameters : List[str]
-
-  def __str__(self):
-      return self.constructor + '(' + ",".join(self.parameters) + ')'
-
-  def __repr__(self):
-      return str(self)
-  
 ################ Proofs ######################################
   
 @dataclass

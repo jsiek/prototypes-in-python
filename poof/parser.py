@@ -179,6 +179,12 @@ def parse_tree_to_ast(e):
     elif e.data in primitive_ops:
         return PrimitiveCall(e.meta, e.data,
                              [parse_tree_to_ast(c) for c in e.children])
+    elif e.data == 'switch_case':
+        e1 , e2 = e.children
+        return SwitchCase(e.meta, parse_tree_to_ast(e1), parse_tree_to_ast(e2))
+    elif e.data == 'switch':
+        e1 , e2 = e.children
+        return Switch(e.meta, parse_tree_to_ast(e1), parse_tree_to_list(e2))
     
     # proofs
     if e.data == 'proof_var':
