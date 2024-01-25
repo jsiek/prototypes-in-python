@@ -252,6 +252,10 @@ def parse_tree_to_ast(e):
         type_name = str(e.children[0].value)
         cases = parse_tree_to_list(e.children[1])
         return Induction(e.meta, type_name, cases)
+    elif e.data == 'switch_proof':
+        subject = parse_tree_to_ast(e.children[0])
+        cases = parse_tree_to_list(e.children[1])
+        return SwitchProof(e.meta, subject, cases)
     elif e.data == 'ind_case':
         pat = parse_tree_to_ast(e.children[0])
         body = parse_tree_to_ast(e.children[1])

@@ -5,6 +5,15 @@ from typing import Any, Tuple, List
 def copy_dict(d):
   return {k:v for k,v in d.items()}
 
+name_id = 0
+
+def generate_name(name):
+    global name_id
+    ls = name.split('.')
+    new_id = name_id
+    name_id += 1
+    return ls[0] + '.' + str(new_id)
+  
 @dataclass
 class AST:
     location: Meta
@@ -217,9 +226,11 @@ class Lambda(Term):
 
   def substitute(self, env):
       new_env = copy_dict(env)
-      for p in self.vars:
-          del new_env[p.ident]
-      return Lambda(self.vars, self.body.substitute(new_env), name)
+      # alpha rename the parameters
+      new_vars = [generate_name(p) for p in self.vars]
+      for (v,new_v) in zip(self.vars, new_vars):
+          new_env[v] = TVar(self.location, new_v)
+      return Lambda(new_vars, self.body.substitute(new_env), name)
 
 def is_match(pattern, arg, subst):
     ret = False
@@ -261,17 +272,23 @@ class Call(Term):
       fun = self.rator.reduce(env)
       args = [arg.reduce(env) for arg in self.args]
       match fun:
-        case Lambda(loc,vars, body):
-          ret = body.substitute({x:arg for (x,arg) in zip(vars, args)}).reduce(env)
+        case Lambda(loc, vars, body):
+          new_env = copy_dict(env)
+          for (x,arg) in zip(vars, args):
+            new_env[x] = arg
+          ret = body.reduce(new_env)
         case RecFun(loc, name, params, returns, cases):
           first_arg = args[0]
           rest_args = args[1:]
           for fun_case in cases:
               subst = {}
               if is_match(fun_case.pattern, first_arg, subst):
+                  new_env = copy_dict(env)
+                  for (k,v) in subst.items():
+                      new_env[k] = v.reduce(env)
                   for (k,v) in zip(fun_case.parameters, rest_args):
-                      subst[k] = v
-                  return fun_case.body.substitute(subst).reduce(env)
+                      new_env[k] = v.reduce(env)
+                  return fun_case.body.reduce(new_env)
           ret = Call(self.location, fun, args)
         case _:
           ret = Call(self.location, fun, args)
@@ -295,9 +312,12 @@ class SwitchCase(AST):
 
   def substitute(self, env):
       new_env = copy_dict(env)
-      for x in self.pattern.parameters:
-          new_env[x] = TVar(self.location, x)
-      return SwitchCase(self.location, self.pattern,
+      # alpha rename the parameters
+      new_params = [generate_name(x) for x in self.pattern.parameters]
+      for x, new_x in zip(self.pattern.parameters, new_params):
+          new_env[x] = TVar(self.location, new_x)
+      return SwitchCase(self.location,
+                        PatternCons(self.pattern.constructor, new_params),
                         self.body.substitute(new_env))
   
 @dataclass
@@ -316,9 +336,13 @@ class Switch(Term):
   def reduce(self, env):
       new_subject = self.subject.reduce(env)
       for c in self.cases:
+          # TODO: alpha renaming
           subst = {}
           if is_match(c.pattern, new_subject, subst):
-              return c.body.substitute(subst).reduce(env)
+            new_env = copy_dict(env)
+            for x,v in subst.items():
+              new_env[x] = v
+            return c.body.reduce(new_env)
       return Switch(self.location, new_subject, self.cases)
   
   def substitute(self, env):
@@ -524,6 +548,14 @@ class Induction(Proof):
   def __str__(self):
       return 'induction'
 
+@dataclass
+class SwitchProof(Proof):
+  subject: Term
+  cases: List[IndCase]
+
+  def __str__(self):
+      return 'switch proof'
+    
 @dataclass
 class Rewrite(Proof):
   equation: Proof

@@ -85,18 +85,18 @@ proof
     any y:Nat, z:Nat {
       suppose prem: add(zero,y) = add(zero,z)  {
         transitive have y = add(zero,y) by reflexive
-	transitive have add(zero,y) = add(zero,z) by prem
-	           have add(zero,z) = z by reflexive
+        transitive have add(zero,y) = add(zero,z) by prem
+                   have add(zero,z) = z by reflexive
       }
     }
   }
   case suc(x') {
     any y:Nat, z:Nat {
       suppose prem: add(suc(x'),y) = add(suc(x'),z) {
-	p1: suc(add(x', y)) = suc(add(x',z)) by
-	  transitive have suc(add(x', y)) = add(suc(x'),y) by reflexive
-	  transitive prem reflexive;
-	p2: add(x',y) = add(x',z) by injective p1;
+        p1: suc(add(x', y)) = suc(add(x',z)) by
+          transitive have suc(add(x', y)) = add(suc(x'),y) by reflexive
+          transitive prem reflexive;
+        p2: add(x',y) = add(x',z) by injective p1;
         IHyz: if add(x',y) = add(x',z) then y = z by IH[y,z];
         apply IHyz with p2
       }
@@ -119,7 +119,7 @@ function sub(Nat,Nat) -> Nat {
   sub(suc(n), m) = switch m {
                      case zero { suc(n) }
                      case suc(m') { sub(n, m') }
-		   };
+                   };
 }
 
 function sub_from(Nat,Nat) -> Nat {
@@ -146,4 +146,38 @@ proof
   induction Nat
   case zero { . }
   case suc(n') { IH }
+end
+
+theorem less_equal_trans: all m:Nat. all n:Nat, o:Nat.
+  if less_equal(m,n) and less_equal(n,o) then less_equal(m,o)
+proof
+  induction Nat
+  case zero { any n:Nat, o:Nat { suppose _ { have less_equal(zero,o) by . } } }
+  case suc(m') { any n:Nat, o:Nat { suppose p {
+    sm_n: less_equal(suc(m'), n) by p;
+    n_o: less_equal(n,o) by p;
+    switch n {
+      case zero {
+        sm_z: less_equal(suc(m'),zero) by rewrite symmetric EQ then sm_n;
+        contra: false by sm_z;
+        contra
+      }
+      case suc(n') {
+        sm_sn: less_equal(suc(m'),suc(n')) by rewrite symmetric EQ then sm_n;
+        m_n: less_equal(m', n') by sm_sn;
+        sn_o: less_equal(suc(n'),o) by rewrite symmetric EQ then n_o;
+        switch o {
+          case zero {
+            sn_z: less_equal(suc(n'), zero) by rewrite symmetric EQ then sn_o;
+            sn_z
+          }
+          case suc(o') {
+            sn_so: less_equal(suc(n'),suc(o')) by rewrite symmetric EQ then sn_o;
+            n_o: less_equal(n',o') by sn_so;
+            rewrite EQ then apply IH[n',o'] with m_n, n_o
+          }
+        }
+      }
+    }
+  } } }
 end
