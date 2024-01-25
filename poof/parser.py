@@ -75,10 +75,6 @@ def parse_tree_to_formula(e):
     e.meta.filename = filename
     if e.data == 'nothing':
         return None
-    elif e.data == 'true_formula':
-        return Bool(e.meta, True)
-    elif e.data == 'false_formula':
-        return Bool(e.meta, False)
     elif e.data == 'term_formula':
         return parse_tree_to_ast(e.children[0])
     elif e.data == 'if_then_formula':
@@ -161,6 +157,10 @@ def parse_tree_to_ast(e):
         return TVar(e.meta, str(e.children[0].value))
     elif e.data == 'int':
         return Int(e.meta, int(e.children[0]))
+    elif e.data == 'true_literal':
+        return Bool(e.meta, True)
+    elif e.data == 'false_literal':
+        return Bool(e.meta, False)
     elif e.data == 'field_access':
         subject = parse_tree_to_ast(e.children[0])
         field_name = str(e.children[1].value)
@@ -340,5 +340,5 @@ if __name__ == "__main__":
         print(filename + ' is valid')
         exit(0)
     except Exception as e:
-        print('exception ' + str(e))
+        print(str(e))
         exit(1)

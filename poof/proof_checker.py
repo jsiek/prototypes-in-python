@@ -2,7 +2,7 @@ from abstract_syntax import *
 from error import error
 
 def check_implies(loc, frm1, frm2):
-  # print('check_implies? ' + str(frm1) + ' => ' + str(frm2))
+  print('check_implies? ' + str(frm1) + ' => ' + str(frm2))
   match frm2:
     case Bool(loc, True):
       return
@@ -53,7 +53,7 @@ def instantiate(loc, allfrm, args):
       error(loc, 'expected all formula to instantiate, not ' + str(allfrm))
   
 def check_proof(proof, env):
-#  print('synthesize') ; print('\t' + str(proof))
+  print('synthesize formula while checking proof') ; print('\t' + str(proof))
   ret = None
   match proof:
     case PHole(loc):
@@ -107,7 +107,7 @@ def check_proof(proof, env):
           error(loc, 'in injective, non-applicable formula: ' + str(formula))
     case _:
       error(proof.location, 'in check_proof, unhandled ' + str(proof))
-  # print('\t=> ' + str(ret))
+  print('\t=> ' + str(ret))
   return ret
 
 def str_of_env(env):
@@ -190,8 +190,8 @@ def rewrite(loc, formula, equation):
       error(loc, 'in rewrite, unhandled ' + str(formula))
 
 def check_proof_of(proof, formula, env):
-  # print('nts: ' + str(formula) + '?')
-  # print('\t' + str(proof))
+  print('nts: ' + str(formula) + '?')
+  print('\t' + str(proof))
   match proof:
     case PHole(loc):
       error(loc, 'unfinished proof:\n' + str(formula))
@@ -306,7 +306,7 @@ def check_proof_of(proof, formula, env):
       check_proof_of(body, new_formula, env)
     case _:
       form = check_proof(proof, env)
-      check_implies(proof.location, form, formula)
+      check_implies(proof.location, form.reduce(env), formula.reduce(env))
 
 
 def type_check_call(loc, rator, args, type_env, env, recfun, subterms):
@@ -324,6 +324,8 @@ def synth_term(term, type_env, env, recfun, subterms):
   match term:
     case Int(loc, value):
       return IntType(loc)
+    case Bool(loc, value):
+      return BoolType(loc)
     case TVar(loc, name):
       if name in type_env.keys():
         return type_env[name]

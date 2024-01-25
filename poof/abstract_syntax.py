@@ -337,9 +337,10 @@ class Bool(Formula):
     return str(self.value)
   def __repr__(self):
     return str(self)
-
   def reduce(self, env):
     return self
+  def substitute(self, env):
+      return self
 
 @dataclass
 class And(Formula):
@@ -378,6 +379,15 @@ class IfThen(Formula):
     return 'if ' + str(self.premise) + ' then ' + str(self.conclusion)
   def __repr__(self):
     return str(self)
+  def reduce(self, env):
+    prem = self.premise.reduce(env)
+    conc = self.conclusion.reduce(env)
+    if prem == Bool(self.location, False):
+      return Bool(self.location, True)
+    elif conc == Bool(self.location, True):
+      return Bool(self.location, True)
+    else:
+      return IfThen(self.location, prem, conc)
 
 @dataclass
 class All(Formula):

@@ -131,3 +131,19 @@ theorem sub_one_one: sub(suc(zero), suc(zero)) = zero
 proof
   reflexive
 end
+
+function less_equal(Nat,Nat) -> bool {
+  less_equal(zero, m) = true;
+  less_equal(suc(n'), m) =
+    switch m {
+      case zero { false }
+      case suc(m') { less_equal(n', m') }
+    };
+}
+
+theorem less_equal_refl: all n:Nat. less_equal(n,n)
+proof
+  induction Nat
+  case zero { . }
+  case suc(n') { IH }
+end

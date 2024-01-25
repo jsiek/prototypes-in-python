@@ -1,0 +1,146 @@
+DIGIT: /[0-9]/
+INT: DIGIT+
+UPPER: /[A-Z]/
+LOWER: /[a-z]/
+IDENT: (/_/|UPPER|LOWER) (/_/|UPPER|LOWER|DIGIT|/[₀₁₂₃₄₅₆₇₈₉!?']/)*
+NEWLINE: (/\r/? /\n/)+
+WS: /[ \t\f\r\n]/+
+LINECOMMENT: "//" /[^\n]*/ NEWLINE
+COMMENT: /\/\*([^\*]|\*+[^\/])*\*+\//
+
+?term: term "=" term_add                      -> equal
+    | term "≠" term_add                       -> not_equal
+    | term "<" term_add                        -> less
+    | term ">" term_add                        -> greater
+    | term "≤" term_add                       -> less_equal
+    | term "≥" term_add                       -> greater_equal
+    | term_add
+
+?term_add: term_add "+" term_med                   -> add
+    | term_add "-" term_med                        -> sub
+    | term_med
+
+?term_med: term_med "div" term_hi                  -> int_div
+    | term_med "/" term_hi                         -> div
+    | term_med "%" term_hi                         -> mod
+    | term_med "*" term_hi                         -> mul
+    | term_hi
+
+?switch_case: "case" pattern "{" term "}"           -> switch_case
+
+?switch_list: switch_case                           -> single
+    | switch_case switch_list                       -> push
+
+?term_hi: INT                                      -> int
+    | "true"                                       -> true_literal
+    | "false"                                      -> false_literal
+    | IDENT                                        -> term_var
+    | "-" term_hi                                  -> neg
+    | term_hi "(" term_list ")"                    -> call
+    | "λ" ident_list "{" term "}"                  -> lambda
+    | "switch" term "{" switch_list "}"            -> switch
+    | "(" term ")"                                 -> paren
+
+?term_list:                                        -> empty
+    | term                                         -> single
+    | term "," term_list                           -> push
+
+?formula: term                                         -> term_formula
+    | formula "and" formula                        -> and_formula
+    | formula "or" formula                         -> or_formula
+    | "if" formula "then" formula                  -> if_then_formula
+    | "all" var_list "." formula                 -> all_formula
+    | "some" var_list "." formula                -> some_formula
+    | "(" formula ")"
+    
+?ident_list:                                       -> empty
+    | IDENT                                        -> single
+    | IDENT "," ident_list                         -> push
+
+?var_list:                                         -> empty_binding
+    | IDENT ":" type                               -> single_binding
+    | IDENT ":" type "," var_list                  -> push_binding
+
+?ind_case: "case" pattern "{" proof "}"            -> ind_case
+
+?ind_case_list: ind_case                           -> single
+    | ind_case ind_case_list                       -> push
+
+?proof: "have" formula "by" proof                        -> annot
+    | "apply" proof "with" proof                         -> apply
+    | proof "," proof                                    -> tuple
+    | "suppose" IDENT "{" proof "}"                      -> imp_intro
+    | "suppose" IDENT ":" formula "{" proof "}"          -> imp_intro_explicit
+    | "any"  var_list "{" proof "}"                      -> all_intro
+    | "cases" proof case_list                            -> cases
+    | "induction" IDENT ind_case_list                    -> induction
+    | "rewrite" proof "then" proof                       -> rewrite
+    | "switch" term "{" ind_case_list "}"                -> switch_proof
+    | proof_hi
+
+?proof_hi: 
+    | IDENT                                              -> proof_var
+    | IDENT ":" formula "by" proof ";" proof             -> let
+    | "."                                                -> true_proof
+    | "reflexive"                                        -> refl_proof
+    | "symmetric" proof                                  -> sym_proof
+    | "transitive" proof proof                           -> trans_proof
+    | "injective" proof                                  -> injective_proof
+    | "(" proof ")"                                      -> paren
+    | proof_hi "[" term_list "]"                         -> all_elim
+    | "?"                                                -> hole_proof
+
+?case: "case" IDENT "{" proof "}"                        -> case
+
+?case_list: case                                        -> single
+    | case case_list                                    -> push
+
+?theorem: "theorem" IDENT ":" formula "proof" proof "end" -> theorem
+
+?type: "(" type_list ")" "->" type                                -> function_type
+ | type_hi
+
+?type_hi: IDENT   -> type_name
+ | "int"          -> int_type
+ | "bool"         -> bool_type
+
+?type_list:                                      -> empty
+    | type                                       -> single
+    | type "," type_list                         -> push
+    
+?constr: IDENT ";"                               -> constr_id
+    | IDENT "(" type_list ")" ";"                -> constr_apply
+
+?constr_list: constr                             -> single
+    | constr constr_list                         -> push
+    
+?union: "union" IDENT "{" constr_list "}"        -> union
+
+?pattern: IDENT                                  -> pattern_id
+    | IDENT "(" ident_list ")"                   -> pattern_apply
+
+?pattern_list:                                      -> empty
+    | pattern                                       -> single
+    | pattern "," ident_list                        -> push
+    
+?fun_case: IDENT "(" pattern_list ")" "=" term ";"   -> fun_case
+
+?fun_case_list: fun_case                               -> single
+    | fun_case fun_case_list                           -> push
+    
+?rec_function: "function" IDENT "(" type_list ")" "->" type "{" fun_case_list "}" -> rec_fun
+
+?definition: "define" IDENT "is" term                  -> define
+?statement: theorem
+ | union
+ | rec_function
+ | definition
+
+?statement_list: statement                               -> single
+    | statement statement_list                           -> push
+
+program: statement_list
+
+%ignore COMMENT
+%ignore LINECOMMENT
+%ignore WS
