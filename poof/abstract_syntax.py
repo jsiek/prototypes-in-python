@@ -557,13 +557,21 @@ class SwitchProof(Proof):
       return 'switch proof'
     
 @dataclass
-class Rewrite(Proof):
+class RewriteGoal(Proof):
   equation: Proof
   body: Proof
 
   def __str__(self):
-      return 'rewrite'
-  
+      return 'rewrite_goal'
+
+@dataclass
+class RewriteFact(Proof):
+  subject: Proof
+  equation: Proof
+
+  def __str__(self):
+      return 'rewrite_fact'
+    
 ################ Statements ######################################
   
 @dataclass

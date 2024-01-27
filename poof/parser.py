@@ -260,10 +260,14 @@ def parse_tree_to_ast(e):
         pat = parse_tree_to_ast(e.children[0])
         body = parse_tree_to_ast(e.children[1])
         return IndCase(e.meta, pat, body)
-    elif e.data == 'rewrite':
+    elif e.data == 'rewrite_goal':
         eq = parse_tree_to_ast(e.children[0])
         body = parse_tree_to_ast(e.children[1])
-        return Rewrite(e.meta, eq, body)
+        return RewriteGoal(e.meta, eq, body)
+    elif e.data == 'rewrite_fact':
+        subject = parse_tree_to_ast(e.children[0])
+        eq = parse_tree_to_ast(e.children[1])
+        return RewriteFact(e.meta, subject, eq)
     
     # constructor declaration
     elif e.data == 'constr_id':

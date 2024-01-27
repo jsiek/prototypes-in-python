@@ -63,6 +63,11 @@ def check_proof(proof, env, type_env):
     print('synthesize formula while checking proof') ; print('\t' + str(proof))
   ret = None
   match proof:
+    case RewriteFact(loc, subject, equation_proof):
+      formula = check_proof(subject, env, type_env)
+      equation = check_proof(equation_proof, env, type_env)
+      new_formula = rewrite(loc, formula, equation)
+      return new_formula
     case PHole(loc):
       error(loc, 'unfinished proof')
     case PVar(loc, name):
@@ -348,7 +353,7 @@ def check_proof_of(proof, formula, env, type_env):
         case _:
           error(loc, "switch expected union type, not " + type_name)
           
-    case Rewrite(loc, equation_proof, body):
+    case RewriteGoal(loc, equation_proof, body):
       equation = check_proof(equation_proof, env, type_env)
       new_formula = rewrite(loc, formula, equation)
       # print('rewrite goal using equation ' + str(equation) \

@@ -16,7 +16,8 @@ proof
   }
   case suc(n') {
     transitive have add(suc(n'), zero) = suc(add(n', zero)) by reflexive
-               have suc(add(n', zero)) = suc(n') by rewrite IH then reflexive
+               have suc(add(n', zero)) = suc(n')
+	          by rewrite goal with IH then reflexive
   }
 end
 

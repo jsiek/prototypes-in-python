@@ -16,7 +16,7 @@ proof
   }
   case suc(n') {
     transitive have add(suc(n'), zero) = suc(add(n', zero)) by reflexive
-               have suc(add(n', zero)) = suc(n') by rewrite IH then reflexive
+               have suc(add(n', zero)) = suc(n') by rewrite goal with IH then reflexive
   }
 end
 
@@ -32,7 +32,7 @@ proof
     any n : Nat {
       have add(suc(n'),suc(n)) = suc(add(suc(n'),n)) by
       transitive have add(suc(n'),suc(n)) = suc(add(n',suc(n))) by reflexive
-      transitive have suc(add(n',suc(n))) = suc(suc(add(n',n))) by rewrite IH[n] then reflexive
+      transitive have suc(add(n',suc(n))) = suc(suc(add(n',n))) by rewrite goal with IH[n] then reflexive
                  have suc(suc(add(n',n))) = suc(add(suc(n'),n)) by reflexive
     }
   }
@@ -52,8 +52,10 @@ proof
     any m : Nat {
       have add(suc(n'),m) = add(m,suc(n')) by
       transitive have add(suc(n'),m) = suc(add(n',m)) by reflexive
-      transitive have suc(add(n',m)) = suc(add(m,n')) by rewrite IH[m] then reflexive
-                 have suc(add(m,n')) = add(m,suc(n')) by symmetric add_suc[m][n']
+      transitive have suc(add(n',m)) = suc(add(m,n'))
+                     by rewrite goal with IH[m] then reflexive
+                 have suc(add(m,n')) = add(m,suc(n'))
+                     by symmetric add_suc[m][n']
     }
   }
 end
@@ -71,7 +73,7 @@ proof
     any n:Nat, o:Nat {
       have add(add(suc(m'),n),o) = add(suc(m'),add(n,o)) by
       transitive have add(add(suc(m'),n),o) = suc(add(add(m',n),o)) by reflexive
-      transitive have suc(add(add(m',n),o)) = suc(add(m',add(n,o))) by rewrite IH[n,o] then reflexive
+      transitive have suc(add(add(m',n),o)) = suc(add(m',add(n,o))) by rewrite goal with IH[n,o] then reflexive
                  have suc(add(m',add(n,o))) = add(suc(m'),add(n,o)) by reflexive
     }
   }
@@ -158,23 +160,23 @@ proof
     n_o: less_equal(n,o) by p;
     switch n {
       case zero {
-        sm_z: less_equal(suc(m'),zero) by rewrite symmetric EQ then sm_n;
+        sm_z: less_equal(suc(m'),zero) by rewrite sm_n with EQ;
         contra: false by sm_z;
         contra
       }
       case suc(n') {
-        sm_sn: less_equal(suc(m'),suc(n')) by rewrite symmetric EQ then sm_n;
+        sm_sn: less_equal(suc(m'),suc(n')) by rewrite sm_n with EQ;
         m_n: less_equal(m', n') by sm_sn;
-        sn_o: less_equal(suc(n'),o) by rewrite symmetric EQ then n_o;
+        sn_o: less_equal(suc(n'),o) by rewrite n_o with EQ;
         switch o {
           case zero {
-            sn_z: less_equal(suc(n'), zero) by rewrite symmetric EQ then sn_o;
-            sn_z
+            sn_z: less_equal(suc(n'), zero) by rewrite sn_o with EQ;
+            have false by sn_z
           }
           case suc(o') {
-            sn_so: less_equal(suc(n'),suc(o')) by rewrite symmetric EQ then sn_o;
+            sn_so: less_equal(suc(n'),suc(o')) by rewrite sn_o with EQ;
             n_o: less_equal(n',o') by sn_so;
-            rewrite EQ then apply IH[n',o'] with m_n, n_o
+            rewrite goal with EQ then apply IH[n',o'] with m_n, n_o
           }
         }
       }
