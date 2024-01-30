@@ -2,7 +2,6 @@ theorem T:
   if (all x:int. x = x)
   then 1 = 1
 proof
-  suppose xeqx {
-    xeqx[1]
-  }
+  suppose xeqx;
+  xeqx[1]
 end

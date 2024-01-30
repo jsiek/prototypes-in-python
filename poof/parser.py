@@ -1,6 +1,6 @@
 from abstract_syntax import *
 from dataclasses import dataclass
-from lark import Lark, Token, Tree, logger
+from lark import Lark, Token, Tree, logger, exceptions
 from proof_checker import check_poof
 import sys
 
@@ -341,12 +341,22 @@ if __name__ == "__main__":
     filename = sys.argv[1]
     file = open(filename, 'r')
     p = file.read()
-    ast = parse(p, trace=False)
-    # print(str(ast))
     try:
-        check_poof(ast)
-        print(filename + ' is valid')
-        exit(0)
-    except Exception as e:
-        print(str(e))
-        exit(1)
+      ast = parse(p, trace=False)
+      try:
+          check_poof(ast)
+          print(filename + ' is valid')
+          exit(0)
+      except Exception as e:
+          print(str(e))
+          exit(1)
+
+    except exceptions.UnexpectedToken as t:
+        print(filename + ":" + str(t.token.line) + "." + str(t.token.column) \
+              + "-" + str(t.token.end_line) + "." + str(t.token.end_column) + ": " \
+              + "error in parsing: unexpected token '" + t.token.value + "'")
+        print('expected one of ' + ', '.join([str(e) for e in t.expected]))
+        exit(-1)
+        #print(str(t))
+        
+    # print(str(ast))

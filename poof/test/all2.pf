@@ -1,4 +1,6 @@
 theorem T: all p : bool. if p then p
 proof
-  any p : bool { suppose P: p { P } }
+  any p : bool;
+  suppose P: p;
+  P
 end

@@ -69,9 +69,9 @@ COMMENT: /\/\*([^\*]|\*+[^\/])*\*+\//
 ?proof: "have" formula "by" proof                        -> annot
     | "apply" proof "with" proof                         -> apply
     | proof "," proof                                    -> tuple
-    | "suppose" IDENT "{" proof "}"                      -> imp_intro
-    | "suppose" IDENT ":" formula "{" proof "}"          -> imp_intro_explicit
-    | "any"  var_list "{" proof "}"                      -> all_intro
+    | "suppose" IDENT ";" proof                          -> imp_intro
+    | "suppose" IDENT ":" formula ";" proof              -> imp_intro_explicit
+    | "any"  var_list ";" proof                          -> all_intro
     | "cases" proof case_list                            -> cases
     | "induction" IDENT ind_case_list                    -> induction
     | "rewrite" "goal" "with" proof "then" proof         -> rewrite_goal
