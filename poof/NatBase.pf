@@ -160,8 +160,7 @@ proof
     switch n {
       case zero {
         sm_z: less_equal(suc(m'),zero) by rewrite sm_n with EQ;
-        contra: false by sm_z;
-        contra
+        have false by sm_z
       }
       case suc(n') {
         sm_sn: less_equal(suc(m'),suc(n')) by rewrite sm_n with EQ;
