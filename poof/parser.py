@@ -1,7 +1,7 @@
 from abstract_syntax import *
 from dataclasses import dataclass
 from lark import Lark, Token, Tree, logger, exceptions
-from proof_checker import check_poof
+from proof_checker import check_poof, set_verbose
 import sys
 
 from lark import logger
@@ -116,10 +116,18 @@ def parse_tree_to_case_list(e):
     else:
         raise Exception('unrecognized as a type list ' + repr(e))
     
-primitive_ops = {'add', 'sub', 'mul', 'div', 'int_div', 'mod', 'neg', 'sqrt',
-                 'and', 'or', 'not',
-                 'equal', 'not_equal',
-                 'less', 'greater', 'less_equal', 'greater_equal'}
+infix_ops = {'add', 'sub', 'mul', 'div', 'int_div', 'mod',
+             'and', 'or','equal', 'not_equal',
+             'less', 'greater', 'less_equal', 'greater_equal'}
+
+prefix_ops = {'neg', 'not'}
+
+operator_symbol = {'add': '+', 'sub': '-', 'mul': '*', 'div': '/',
+                   'int_div': 'div', 'mod': '%', 'neg':'-', 
+                   'and': 'and', 'or':'or', 'not': 'not',
+                   'equal': '=', 'not_equal': '≠',
+                   'less': '<', 'greater': '>',
+                   'less_equal': '≤', 'greater_equal': '≥'}
 
 impl_num = 0
 def next_impl_num():
@@ -156,7 +164,8 @@ def parse_tree_to_ast(e):
     elif e.data == 'term_var':
         return TVar(e.meta, str(e.children[0].value))
     elif e.data == 'int':
-        return Int(e.meta, int(e.children[0]))
+        # return Int(e.meta, int(e.children[0]))
+        return intToNat(e.meta, int(e.children[0]))
     elif e.data == 'true_literal':
         return Bool(e.meta, True)
     elif e.data == 'false_literal':
@@ -168,17 +177,19 @@ def parse_tree_to_ast(e):
     elif e.data == 'call':
         rator = parse_tree_to_ast(e.children[0])
         rands = parse_tree_to_list(e.children[1])
-        if isinstance(rator, TVar) and rator.name == 'max':
-            return PrimitiveCall(e.meta, 'max', rands)
-        else:
-            return Call(e.meta, rator, rands)
+        return Call(e.meta, rator, rands)
     elif e.data == 'lambda':
         return Lambda(e.meta,
                       parse_tree_to_str_list(e.children[0]),
                       parse_tree_to_ast(e.children[1]))
-    elif e.data in primitive_ops:
-        return PrimitiveCall(e.meta, e.data,
-                             [parse_tree_to_ast(c) for c in e.children])
+    elif e.data in infix_ops:
+        return Call(e.meta, TVar(e.meta, operator_symbol[e.data]),
+                    [parse_tree_to_ast(c) for c in e.children],
+                    True)
+    elif e.data in prefix_ops:
+        return Call(e.meta, TVar(e.meta, operator_symbol[e.data]),
+                    [parse_tree_to_ast(c) for c in e.children],
+                    False)
     elif e.data == 'switch_case':
         e1 , e2 = e.children
         return SwitchCase(e.meta, parse_tree_to_ast(e1), parse_tree_to_ast(e2))
@@ -341,6 +352,7 @@ if __name__ == "__main__":
     filename = sys.argv[1]
     file = open(filename, 'r')
     p = file.read()
+    set_verbose(False)
     try:
       ast = parse(p, trace=False)
       try:

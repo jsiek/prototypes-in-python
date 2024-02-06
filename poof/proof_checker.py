@@ -114,13 +114,13 @@ def check_proof(proof, env, type_env):
             error(loc, 'in injective, ' + f1 + ' != ' + f2)
           if not is_constructor(f1, env):
             error(loc, 'in injective, ' + f1 + ' not a constructor')
-          return PrimitiveCall(loc, 'equal', [arg1, arg2])
+          return mkEqual(loc, arg1, arg2)
         case _:
           error(loc, 'in injective, non-applicable formula: ' + str(formula))
     case PSymmetric(loc, eq_pf):
       frm = check_proof(eq_pf, env, type_env)
       (a,b) = split_equation(loc, frm)
-      return PrimitiveCall(loc, 'equal', [b,a])
+      return mkEqual(loc, b, a)
     case _:
       error(proof.location, 'in check_proof, unhandled ' + str(proof))
   if verbose:
@@ -151,11 +151,11 @@ def substitute(sub, frm):
       for var in vars:
         new_sub[var[0]] = TVar(loc,var[0])
       ret = All(loc, vars, substitute(new_sub, frm2))
-    case PrimitiveCall(loc, op, args):
-      ret = PrimitiveCall(loc, op, [substitute(sub, arg) for arg in args])
-    case Call(loc, rator, args):
+    # case PrimitiveCall(loc, op, args):
+    #   ret = PrimitiveCall(loc, op, [substitute(sub, arg) for arg in args])
+    case Call(loc, rator, args, infix):
       ret = Call(loc, substitute(sub, rator),
-                 [substitute(sub, arg) for arg in args])
+                 [substitute(sub, arg) for arg in args], infix)
     case _:
       error(frm.location, 'in substitute, unhandled ' + str(frm))
   # print('substitute ' + str(frm) + ' via ' + str_of_env(sub) \
@@ -174,7 +174,7 @@ def pattern_to_term(pat):
 
 def split_equation(loc, equation):
   match equation:
-    case PrimitiveCall(loc1, 'equal', [L, R]):
+    case Call(loc1, TVar(loc2, '='), [L, R], _):
       return (L, R)
     case _:
       error(loc, 'expected an equality, not ' + str(equation))
@@ -198,12 +198,12 @@ def rewrite(loc, formula, equation):
     case All(loc2, vars, frm2):
       # TODO, deal with variable clash
       return All(loc2, vars, rewrite(loc, frm2, equation))
-    case PrimitiveCall(loc2, op, args):
-      return PrimitiveCall(loc2, op,
-                           [rewrite(loc, arg, equation) for arg in args])
-    case Call(loc2, rator, args):
+    # case PrimitiveCall(loc2, op, args):
+    #   return PrimitiveCall(loc2, op,
+    #                        [rewrite(loc, arg, equation) for arg in args])
+    case Call(loc2, rator, args, infix):
       return Call(loc2, rewrite(loc, rator, equation),
-                  [rewrite(loc, arg, equation) for arg in args])
+                  [rewrite(loc, arg, equation) for arg in args], infix)
     case _:
       error(loc, 'in rewrite, unhandled ' + str(formula))
 
@@ -225,7 +225,7 @@ def check_proof_of(proof, formula, env, type_env):
     
     case PReflexive(loc):
       match formula:
-        case PrimitiveCall(loc2, 'equal', [lhs, rhs]):
+        case Call(loc2, TVar(loc3, '='), [lhs, rhs], _):
           lhsNF = lhs.reduce(env)
           rhsNF = rhs.reduce(env)
           # print('reflexive: ' + str(lhsNF) + ' =? ' + str(rhsNF))
@@ -238,22 +238,21 @@ def check_proof_of(proof, formula, env, type_env):
           
     case PSymmetric(loc, eq_pf):
       (a,b) = split_equation(loc, formula)
-      flip_formula = PrimitiveCall(loc, 'equal', [b,a])
+      flip_formula = mkEqual(loc, b, a)
       check_proof_of(eq_pf, flip_formula, env, type_env)
 
     case PTransitive(loc, eq_pf1, eq_pf2):
       (a1,c) = split_equation(loc, formula)
       eq1 = check_proof(eq_pf1, env, type_env)
       (a2,b) = split_equation(loc, eq1)
-      check_proof_of(eq_pf2, PrimitiveCall(loc, 'equal', [b,c]), env, type_env)
+      check_proof_of(eq_pf2, mkEqual(loc, b, c), env, type_env)
       if a1 != a2:
         error(loc, 'for transitive, ' + str(a1) + ' != ' + str(a2))
 
     case PInjective(loc, eq_pf):
       (a,b) = split_equation(loc, formula)
-      flip_formula = PrimitiveCall(loc, 'equal',
-                                   [Call(loc, TVar(loc,'suc'), [a]),
-                                    Call(loc, TVar(loc,'suc'), [b])])
+      flip_formula = mkEqual(loc, Call(loc, TVar(loc,'suc'), [a]),
+                             Call(loc, TVar(loc,'suc'), [b]))
       check_proof_of(eq_pf, flip_formula, env, type_env)
         
     case AllIntro(loc, vars, body):
@@ -347,8 +346,8 @@ def check_proof_of(proof, formula, env, type_env):
                     + " arguments to " + constr.name \
                     + " not " + len(scase.pattern.parameters))
             new_env = copy_dict(env)
-            new_env['EQ'] = PrimitiveCall(scase.location, 'equal',
-                                          [subject, pattern_to_term(scase.pattern)])
+            new_env['EQ'] = mkEqual(scase.location, 
+                                    subject, pattern_to_term(scase.pattern))
             check_proof_of(scase.body, formula, new_env, type_env)
         case _:
           error(loc, "switch expected union type, not " + type_name)
@@ -423,9 +422,9 @@ def synth_term(term, type_env, env, recfun, subterms):
   
 def check_term(term, typ, type_env, env, recfun, subterms):
   match term:
-    case PrimitiveCall(loc, op, args):
-      # TODO
-      return
+    # case PrimitiveCall(loc, op, args):
+    #   # TODO
+    #   return
     case Lambda(loc, vars, body):
       match typ:
         case FunctionType(loc, param_types, return_type):

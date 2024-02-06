@@ -114,7 +114,10 @@ class TVar(Term):
       return ret
   
   def __str__(self):
-      return self.name
+      if self.name == 'zero':
+        return '0'
+      else:
+        return self.name
 
   def reduce(self, env):
       if self.name in env:
@@ -254,9 +257,15 @@ def is_match(pattern, arg, subst):
 class Call(Term):
   rator: Term
   args: list[Term]
-
+  infix: bool = False
+  
   def __str__(self):
-    return str(self.rator) + "(" + ",".join([str(arg) for arg in self.args]) + ")"
+    if self.infix:
+      return str(self.args[0]) + " " + str(self.rator) + " " + str(self.args[1])
+    elif isNat(self):
+      return str(natToInt(self))
+    else:
+      return str(self.rator) + "(" + ",".join([str(arg) for arg in self.args]) + ")"
 
   def __repr__(self):
     return str(self)
@@ -633,3 +642,37 @@ class RecFun(Statement):
 class Define(Statement):
   name: str
   body: Term
+
+
+def mkEqual(loc, arg1, arg2):
+  return Call(loc, TVar(loc, '='), [arg1, arg2], True)
+
+def mkZero(loc):
+  return TVar(loc, 'zero')
+
+def mkSuc(loc, arg):
+  return Call(loc, TVar(loc, 'suc'), [arg], False)
+
+def intToNat(loc, n):
+  if n == 0:
+    return mkZero(loc)
+  else:
+    return mkSuc(loc, intToNat(loc, n - 1))
+
+def isNat(t):
+  match t:
+    case TVar(loc, 'zero'):
+      return True
+    case Call(loc, TVar(loc2, 'suc'), [arg]):
+      return isNat(arg)
+    case _:
+      return False
+
+def natToInt(t):
+  match t:
+    case TVar(loc, 'zero'):
+      return 0
+    case Call(loc, TVar(loc2, 'suc'), [arg]):
+      return 1 + natToInt(arg)
+
+  

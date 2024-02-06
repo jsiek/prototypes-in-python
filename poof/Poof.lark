@@ -2,7 +2,8 @@ DIGIT: /[0-9]/
 INT: DIGIT+
 UPPER: /[A-Z]/
 LOWER: /[a-z]/
-IDENT: (/_/|UPPER|LOWER) (/_/|UPPER|LOWER|DIGIT|/[₀₁₂₃₄₅₆₇₈₉!?']/)*
+OPERATOR: /[\+\-*%=≠<>≤≥]/
+IDENT: (/_/|UPPER|LOWER|OPERATOR) (/_/|UPPER|LOWER|DIGIT|/[₀₁₂₃₄₅₆₇₈₉!?']/)*
 NEWLINE: (/\r/? /\n/)+
 WS: /[ \t\f\r\n]/+
 LINECOMMENT: "//" /[^\n]*/ NEWLINE
