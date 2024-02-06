@@ -127,16 +127,16 @@ proof
   reflexive
 end
 
-function less_equal(Nat,Nat) -> bool {
-  less_equal(zero, m) = true;
-  less_equal(suc(n'), m) =
+function ≤(Nat,Nat) -> bool {
+  ≤(zero, m) = true;
+  ≤(suc(n'), m) =
     switch m {
       case zero { false }
-      case suc(m') { less_equal(n', m') }
+      case suc(m') { n' ≤ m' }
     };
 }
 
-theorem less_equal_refl: all n:Nat. less_equal(n,n)
+theorem less_equal_refl: all n:Nat. n ≤ n
 proof
   induction Nat
   case zero { . }
@@ -144,36 +144,36 @@ proof
 end
 
 theorem less_equal_trans: all m:Nat. all n:Nat, o:Nat.
-  if less_equal(m,n) and less_equal(n,o) then less_equal(m,o)
+  if m ≤ n and n ≤ o then m ≤ o
 proof
   induction Nat
   case zero {
     any n:Nat, o:Nat;
     suppose _;
-    have less_equal(zero,o) by .
+    have zero ≤ o by .
   }
   case suc(m') {
     any n:Nat, o:Nat;
     suppose p;
-    sm_n: less_equal(suc(m'), n) by p;
-    n_o: less_equal(n,o) by p;
+    sm_n: suc(m') ≤ n by p;
+    n_o: n ≤ o by p;
     switch n {
       case zero {
-        sm_z: less_equal(suc(m'),zero) by rewrite sm_n with EQ;
+        sm_z: suc(m') ≤ zero by rewrite sm_n with EQ;
         have false by sm_z
       }
       case suc(n') {
-        sm_sn: less_equal(suc(m'),suc(n')) by rewrite sm_n with EQ;
-        m_n: less_equal(m', n') by sm_sn;
-        sn_o: less_equal(suc(n'),o) by rewrite n_o with EQ;
+        sm_sn: suc(m') ≤ suc(n') by rewrite sm_n with EQ;
+        m_n: m' ≤ n' by sm_sn;
+        sn_o: suc(n') ≤ o by rewrite n_o with EQ;
         switch o {
           case zero {
-            sn_z: less_equal(suc(n'), zero) by rewrite sn_o with EQ;
+            sn_z: suc(n') ≤ zero by rewrite sn_o with EQ;
             have false by sn_z
           }
           case suc(o') {
-            sn_so: less_equal(suc(n'),suc(o')) by rewrite sn_o with EQ;
-            n_o: less_equal(n',o') by sn_so;
+            sn_so: suc(n') ≤ suc(o') by rewrite sn_o with EQ;
+            n_o: n' ≤ o' by sn_so;
             rewrite goal with EQ then apply IH[n',o'] with m_n, n_o
           }
         }
