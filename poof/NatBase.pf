@@ -3,25 +3,25 @@ union Nat {
   suc(Nat);
 }
 
-function add(Nat,Nat) -> Nat {
-  add(zero, m) = m;
-  add(suc(n), m) = suc(add(n, m));
+function +(Nat,Nat) -> Nat {
+  +(zero, m) = m;
+  +(suc(n), m) = suc(n + m);
 }
 
-theorem add_zero: all n:Nat. add(n, zero) = n
+theorem add_zero: all n:Nat. n + zero = n
 proof
   induction Nat
   case zero {
-    have add(zero, zero) = zero by reflexive
+    have zero + zero = zero by reflexive
   }
   case suc(n') {
-    transitive have add(suc(n'), zero) = suc(add(n', zero)) by reflexive
-               have suc(add(n', zero)) = suc(n')
+    transitive have suc(n') + zero = suc(n' + zero) by reflexive
+               have suc(n' + zero) = suc(n')
 	                          by rewrite goal with IH then reflexive
   }
 end
 
-theorem add_suc: all m:Nat. all n:Nat. add(m, suc(n)) = suc(add(m,n))
+theorem add_suc: all m:Nat. all n:Nat. m + suc(n) = suc(m + n)
 proof
   induction Nat
   case zero {
@@ -30,71 +30,71 @@ proof
   }
   case suc(n') {
     any n : Nat;
-    have add(suc(n'),suc(n)) = suc(add(suc(n'),n)) by
-    transitive have add(suc(n'),suc(n)) = suc(add(n',suc(n))) by reflexive
-    transitive have suc(add(n',suc(n))) = suc(suc(add(n',n)))
+    have suc(n') + suc(n) = suc(suc(n') + n) by
+    transitive have suc(n') + suc(n) = suc(n' + suc(n)) by reflexive
+    transitive have suc(n' + suc(n)) = suc(suc(n' + n))
                                  by rewrite goal with IH[n] then reflexive
-               have suc(suc(add(n',n))) = suc(add(suc(n'),n)) by reflexive
+               have suc(suc(n' + n)) = suc(suc(n') + n) by reflexive
   }
 end  
 
-theorem add_commute: all n:Nat. all m:Nat. add(n,m) = add(m,n)
+theorem add_commute: all n:Nat. all m:Nat. n + m = m + n
 proof
   induction Nat
   case zero {
     any m : Nat;
-    have add(zero,m) = add(m,zero) by
-    transitive have add(zero,m) = m by reflexive
-               have m = add(m,zero) by symmetric add_zero[m]
+    have zero + m = m + zero by
+    transitive have zero + m = m by reflexive
+               have m = m + zero by symmetric add_zero[m]
   }
   case suc(n') {
     any m : Nat;
-    have add(suc(n'),m) = add(m,suc(n')) by
-    transitive have add(suc(n'),m) = suc(add(n',m)) by reflexive
-    transitive have suc(add(n',m)) = suc(add(m,n'))
+    have suc(n') + m = m + suc(n') by
+    transitive have suc(n') + m = suc(n' + m) by reflexive
+    transitive have suc(n' + m) = suc(m + n')
 		   by rewrite goal with IH[m] then reflexive
-	       have suc(add(m,n')) = add(m,suc(n'))
+	       have suc(m + n') = m + suc(n')
 		   by symmetric add_suc[m][n']
   }
 end
 
 theorem add_assoc: all m:Nat. all n:Nat, o:Nat.
-  add(add(m,n),o) = add(m,add(n,o))
+  (m + n) + o = m + (n + o)
 proof
   induction Nat
   case zero {
     any n:Nat, o:Nat;
-    have add(add(zero,n),o) = add(zero,add(n,o)) by reflexive
+    have (0 + n) + o = 0 + (n + o) by reflexive
   }
   case suc(m') {
     any n:Nat, o:Nat;
-    have add(add(suc(m'),n),o) = add(suc(m'),add(n,o)) by
-    transitive have add(add(suc(m'),n),o) = suc(add(add(m',n),o)) by reflexive
-    transitive have suc(add(add(m',n),o)) = suc(add(m',add(n,o)))
+    have (suc(m') + n) + o = suc(m') + (n + o) by
+    transitive have (suc(m') + n) + o = suc((m' + n) + o) by reflexive
+    transitive have suc((m' + n) + o) = suc(m' + (n + o))
                                    by rewrite goal with IH[n,o] then reflexive
-	       have suc(add(m',add(n,o))) = add(suc(m'),add(n,o)) by reflexive
+	       have suc(m' + (n + o)) = suc(m') + (n + o) by reflexive
   }
 end
 
 theorem left_cancel: all x:Nat. all y:Nat, z:Nat.
-  if add(x,y) = add(x,z) then y = z
+  if x + y = x + z then y = z
 proof
   induction Nat
   case zero {
     any y:Nat, z:Nat;
-    suppose prem: add(zero,y) = add(zero,z);
-    transitive have y = add(zero,y) by reflexive
-    transitive have add(zero,y) = add(zero,z) by prem
-	       have add(zero,z) = z by reflexive
+    suppose prem: zero + y = zero + z;
+    transitive have y = zero + y by reflexive
+    transitive have zero + y = zero + z by prem
+	       have zero + z = z by reflexive
   }
   case suc(x') {
     any y:Nat, z:Nat;
-    suppose prem: add(suc(x'),y) = add(suc(x'),z);
-    p1: suc(add(x', y)) = suc(add(x',z)) by
-      transitive have suc(add(x', y)) = add(suc(x'),y) by reflexive
+    suppose prem: suc(x') + y = suc(x') + z;
+    p1: suc(x' +  y) = suc(x' + z) by
+      transitive have suc(x' +  y) = suc(x') + y by reflexive
       transitive prem reflexive;
-    p2: add(x',y) = add(x',z) by injective p1;
-    IHyz: if add(x',y) = add(x',z) then y = z by IH[y,z];
+    p2: x' + y = x' + z by injective p1;
+    IHyz: if x' + y = x' + z then y = z by IH[y,z];
     apply IHyz with p2
   }
 end
