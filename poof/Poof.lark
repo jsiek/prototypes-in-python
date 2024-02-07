@@ -2,8 +2,8 @@ DIGIT: /[0-9]/
 INT: DIGIT+
 UPPER: /[A-Z]/
 LOWER: /[a-z]/
-OPERATOR: /[\+\-*%=≠<>≤≥]/
-IDENT: (/_/|UPPER|LOWER|OPERATOR) (/_/|UPPER|LOWER|DIGIT|/[₀₁₂₃₄₅₆₇₈₉!?']/)*
+OPERATOR: /[\+\-*%=≠<>≤≥&]/
+IDENT: (/_/|UPPER|LOWER|OPERATOR) (/_/|UPPER|LOWER|DIGIT|OPERATOR|/[₀₁₂₃₄₅₆₇₈₉!?']/)*
 NEWLINE: (/\r/? /\n/)+
 WS: /[ \t\f\r\n]/+
 LINECOMMENT: "//" /[^\n]*/ NEWLINE
@@ -72,6 +72,8 @@ COMMENT: /\/\*([^\*]|\*+[^\/])*\*+\//
     | proof "," proof                                    -> tuple
     | "suppose" IDENT ";" proof                          -> imp_intro
     | "suppose" IDENT ":" formula ";" proof              -> imp_intro_explicit
+    | "assume" IDENT ";" proof                          -> imp_intro
+    | "assume" IDENT ":" formula ";" proof              -> imp_intro_explicit
     | "any"  var_list ";" proof                          -> all_intro
     | "cases" proof case_list                            -> cases
     | "induction" IDENT ind_case_list                    -> induction
@@ -134,10 +136,14 @@ COMMENT: /\/\*([^\*]|\*+[^\/])*\*+\//
 ?rec_function: "function" IDENT "(" type_list ")" "->" type "{" fun_case_list "}" -> rec_fun
 
 ?definition: "define" IDENT "is" term                  -> define
+
+?import: "import" IDENT                            -> import
+
 ?statement: theorem
  | union
  | rec_function
  | definition
+ | import
 
 ?statement_list: statement                               -> single
     | statement statement_list                           -> push

@@ -8,6 +8,15 @@ function +(Nat,Nat) -> Nat {
   +(suc(n), m) = suc(n + m);
 }
 
+function max(Nat,Nat) -> Nat {
+  max(zero, n) = n;
+  max(suc(m'), n) =
+    switch n {
+      case zero { suc(m') }
+      case suc(n') { suc(max(m',n')) }
+    };
+}
+
 theorem add_zero: all n:Nat. n + 0 = n
 proof
   induction Nat
@@ -109,11 +118,11 @@ proof
   reflexive
 end
 
-function sub(Nat,Nat) -> Nat {
-  sub(0, m) = 0;
-  sub(suc(n), m) = switch m {
+function -(Nat,Nat) -> Nat {
+  -(0, m) = 0;
+  -(suc(n), m) = switch m {
                      case 0 { suc(n) }
-                     case suc(m') { sub(n, m') }
+                     case suc(m') { n - m' }
                    };
 }
 
@@ -122,7 +131,7 @@ function sub_from(Nat,Nat) -> Nat {
   sub_from(suc(n), m) = sub_from(n, pred(m));
 }
 
-theorem sub_one_one: sub(suc(0), suc(0)) = 0
+theorem sub_one_one: 1 - 1 = 0
 proof
   reflexive
 end
@@ -139,8 +148,8 @@ function ≤(Nat,Nat) -> bool {
 theorem less_equal_refl: all n:Nat. n ≤ n
 proof
   induction Nat
-  case 0 { . }
-  case suc(n') { IH }
+  case 0 { have 0 ≤ 0 by . }
+  case suc(n') { have suc(n') ≤ suc(n') by IH }
 end
 
 theorem less_equal_trans: all m:Nat. all n:Nat, o:Nat.
@@ -154,9 +163,9 @@ proof
   }
   case suc(m') {
     any n:Nat, o:Nat;
-    suppose p;
-    sm_n: suc(m') ≤ n by p;
-    n_o: n ≤ o by p;
+    assume Prem : suc(m') ≤ n and n ≤ o;
+    sm_n: suc(m') ≤ n by Prem;
+    n_o: n ≤ o by Prem;
     switch n {
       case 0 {
         sm_z: suc(m') ≤ 0 by rewrite sm_n with EQ;

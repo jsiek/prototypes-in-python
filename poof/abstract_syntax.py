@@ -431,6 +431,10 @@ class All(Formula):
     return 'all ' + ",".join([v + ":" + str(t) for (v,t) in self.vars]) \
         + '. ' + str(self.body)
 
+  def reduce(self, env):
+    # TODO
+    return self
+
 @dataclass
 class Some(Formula):
   vars: list[Tuple[str,Type]]
@@ -643,6 +647,10 @@ class Define(Statement):
   name: str
   body: Term
 
+@dataclass
+class Import(Statement):
+  name: str
+  
 
 def mkEqual(loc, arg1, arg2):
   return Call(loc, TVar(loc, '='), [arg1, arg2], True)

@@ -1,8 +1,6 @@
 from abstract_syntax import *
 from dataclasses import dataclass
-from lark import Lark, Token, Tree, logger, exceptions
-from proof_checker import check_poof, set_verbose
-import sys
+from lark import Lark, Token, Tree, logger
 
 from lark import logger
 import logging
@@ -324,6 +322,10 @@ def parse_tree_to_ast(e):
     elif e.data == 'define':
         return Define(e.meta, str(e.children[0].value),
                       parse_tree_to_ast(e.children[1]))
+
+    # import module/file
+    elif e.data == 'import':
+        return Import(e.meta, str(e.children[0].value))
     
     # whole program
     elif e.data == 'program':
@@ -349,28 +351,3 @@ def parse(s, trace = False):
         print(ast)
         print('')
     return ast
-
-if __name__ == "__main__":
-    filename = sys.argv[1]
-    file = open(filename, 'r')
-    p = file.read()
-    set_verbose(False)
-    try:
-      ast = parse(p, trace=False)
-      try:
-          check_poof(ast)
-          print(filename + ' is valid')
-          exit(0)
-      except Exception as e:
-          print(str(e))
-          exit(1)
-
-    except exceptions.UnexpectedToken as t:
-        print(filename + ":" + str(t.token.line) + "." + str(t.token.column) \
-              + "-" + str(t.token.end_line) + "." + str(t.token.end_column) + ": " \
-              + "error in parsing: unexpected token '" + t.token.value + "'")
-        print('expected one of ' + ', '.join([str(e) for e in t.expected]))
-        exit(-1)
-        #print(str(t))
-        
-    # print(str(ast))

@@ -1,10 +1,16 @@
 from abstract_syntax import *
 from error import error
+from parser import parse, set_filename
 
 verbose = False
 
 def set_verbose(b):
+  global verbose
   verbose = b
+
+def get_verbose():
+  global verbose
+  return verbose
 
 def check_implies(loc, frm1, frm2):
   if verbose:
@@ -54,7 +60,8 @@ def instantiate(loc, allfrm, args):
         ret = substitute(sub, frm)
         return ret
       else:
-        error(loc, 'expected ' + len(vars) + ' arguments, not ' + len(args))
+        error(loc, 'expected ' + str(len(vars)) + ' arguments, ' \
+              + 'not ' + str(len(args)))
     case _:
       error(loc, 'expected all formula to instantiate, not ' + str(allfrm))
   
@@ -71,7 +78,10 @@ def check_proof(proof, env, type_env):
     case PHole(loc):
       error(loc, 'unfinished proof')
     case PVar(loc, name):
-      ret = env[name]
+      if name in env.keys():
+        ret = env[name]
+      else:
+        error(loc, 'undefined identifier ' + name)
     case PTrue(loc):
       ret = Bool(loc, True)
     case PLet(loc, label, frm, reason, rest):
@@ -315,15 +325,18 @@ def check_proof_of(proof, formula, env, type_env):
                     + " arguments to " + constr.name \
                     + " not " + len(indcase.pattern.parameters))
             induction_hypotheses = [instantiate(loc, formula, [TVar(loc,param)])
-                                    for param in indcase.pattern.parameters]
+                                    for (param, typ) in 
+                                    zip(indcase.pattern.parameters,
+                                        constr.parameters)
+                                    if typ.name == type_name]
             if len(induction_hypotheses) > 1:
               induction_hypotheses = And(indcase.location, induction_hypotheses)
             elif len(induction_hypotheses) == 1:
               induction_hypotheses = induction_hypotheses[0]
             new_env = copy_dict(env)
             new_env['IH'] = induction_hypotheses
-            goal = instantiate(loc, formula, [pattern_to_term(indcase.pattern)])
-            # print('induction goal is ' + str(goal))
+            trm = pattern_to_term(indcase.pattern)
+            goal = instantiate(loc, formula, [trm])
             check_proof_of(indcase.body, goal, new_env, type_env)
         case _:
           error(loc, "induction expected name of union, not " + type_name)
@@ -505,6 +518,18 @@ def check_statement(stmt, env, type_env):
                                                TypeName(loc, name))
         else:
           type_env[constr.name] = TypeName(loc, name)
+    case Import(loc, name):
+      filename = name + ".pf"
+      file = open(filename, 'r')
+      src = file.read()
+      set_filename(filename)
+      ast = parse(src, trace=False)
+      # TODO: cache the proof-checking of files
+      for s in ast:
+        check_statement(s, env, type_env)
+      
+    case _:
+      error(stmt.location, "unrecognized statement:\n" + str(stmt))
       
 def check_poof(ast):
   env = {}

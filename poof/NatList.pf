@@ -1,0 +1,45 @@
+import Nat
+
+union NatList {
+  empty;
+  node(Nat, NatList);
+}
+
+function length(NatList) -> Nat {
+  length(empty) = 0;
+  length(node(n, next)) = 1 + length(next);
+}
+
+theorem len_emt: length(empty) = 0
+proof
+  reflexive
+end
+
+theorem len_one: length(node(0, empty)) = 1
+proof
+  reflexive
+end
+
+function append(NatList, NatList) -> NatList {
+  append(empty, ys) = ys;
+  append(node(n, xs), ys) = node(n, append(xs, ys));
+}
+
+theorem length_append: all xs:NatList. all ys:NatList.
+  length(append(xs, ys)) = length(xs) + length(ys)
+proof
+  induction NatList
+  case empty {
+    any ys:NatList;
+    reflexive
+  }
+  case node(n, xs') {
+    any ys:NatList;
+    IHys: length(append(xs', ys)) = length(xs') + length(ys) by IH[ys];
+    transitive have length(append(node(n,xs'),ys))   = length(node(n, append(xs', ys))) by reflexive
+    transitive have length(node(n, append(xs', ys))) = 1 + length(append(xs', ys)) by reflexive
+    transitive have 1 + length(append(xs', ys))      = 1 + (length(xs') + length(ys))
+                    by rewrite goal with IHys then reflexive
+               have 1 + (length(xs') + length(ys)) = length(node(n,xs')) + length(ys) by reflexive
+  }
+end
