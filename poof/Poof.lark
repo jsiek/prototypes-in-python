@@ -119,6 +119,7 @@ COMMENT: /\/\*([^\*]|\*+[^\/])*\*+\//
 ?union: "union" IDENT "{" constr_list "}"        -> union
 
 ?pattern: IDENT                                  -> pattern_id
+    | "0"                                        -> pattern_zero
     | IDENT "(" ident_list ")"                   -> pattern_apply
 
 ?pattern_list:                                      -> empty

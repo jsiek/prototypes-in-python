@@ -302,6 +302,8 @@ def parse_tree_to_ast(e):
     # patterns in function definitions
     elif e.data == 'pattern_id':
         return PatternCons(e.meta, str(e.children[0].value), [])
+    elif e.data == 'pattern_zero':
+        return PatternCons(e.meta, 'zero', [])
     elif e.data == 'pattern_apply':
         params = parse_tree_to_str_list(e.children[1])
         return PatternCons(e.meta, str(e.children[0].value), params)

@@ -4,19 +4,19 @@ union Nat {
 }
 
 function +(Nat,Nat) -> Nat {
-  +(zero, m) = m;
+  +(0, m) = m;
   +(suc(n), m) = suc(n + m);
 }
 
-theorem add_zero: all n:Nat. n + zero = n
+theorem add_zero: all n:Nat. n + 0 = n
 proof
   induction Nat
-  case zero {
-    have zero + zero = zero by reflexive
+  case 0 {
+    have 0 + 0 = 0 by reflexive
   }
   case suc(n') {
-    transitive have suc(n') + zero = suc(n' + zero) by reflexive
-               have suc(n' + zero) = suc(n')
+    transitive have suc(n') + 0 = suc(n' + 0) by reflexive
+               have suc(n' + 0) = suc(n')
 	                          by rewrite goal with IH then reflexive
   }
 end
@@ -24,7 +24,7 @@ end
 theorem add_suc: all m:Nat. all n:Nat. m + suc(n) = suc(m + n)
 proof
   induction Nat
-  case zero {
+  case 0 {
     any n : Nat;
     reflexive
   }
@@ -41,11 +41,11 @@ end
 theorem add_commute: all n:Nat. all m:Nat. n + m = m + n
 proof
   induction Nat
-  case zero {
+  case 0 {
     any m : Nat;
-    have zero + m = m + zero by
-    transitive have zero + m = m by reflexive
-               have m = m + zero by symmetric add_zero[m]
+    have 0 + m = m + 0 by
+    transitive have 0 + m = m by reflexive
+               have m = m + 0 by symmetric add_zero[m]
   }
   case suc(n') {
     any m : Nat;
@@ -62,7 +62,7 @@ theorem add_assoc: all m:Nat. all n:Nat, o:Nat.
   (m + n) + o = m + (n + o)
 proof
   induction Nat
-  case zero {
+  case 0 {
     any n:Nat, o:Nat;
     have (0 + n) + o = 0 + (n + o) by reflexive
   }
@@ -80,12 +80,12 @@ theorem left_cancel: all x:Nat. all y:Nat, z:Nat.
   if x + y = x + z then y = z
 proof
   induction Nat
-  case zero {
+  case 0 {
     any y:Nat, z:Nat;
-    suppose prem: zero + y = zero + z;
-    transitive have y = zero + y by reflexive
-    transitive have zero + y = zero + z by prem
-	       have zero + z = z by reflexive
+    suppose prem: 0 + y = 0 + z;
+    transitive have y = 0 + y by reflexive
+    transitive have 0 + y = 0 + z by prem
+	       have 0 + z = z by reflexive
   }
   case suc(x') {
     any y:Nat, z:Nat;
@@ -100,38 +100,38 @@ proof
 end
 
 function pred(Nat) -> Nat {
-  pred(zero) = zero;
+  pred(0) = 0;
   pred(suc(n)) = n;
 }
 
-theorem pred_one: pred(suc(zero)) = zero
+theorem pred_one: pred(suc(0)) = 0
 proof
   reflexive
 end
 
 function sub(Nat,Nat) -> Nat {
-  sub(zero, m) = zero;
+  sub(0, m) = 0;
   sub(suc(n), m) = switch m {
-                     case zero { suc(n) }
+                     case 0 { suc(n) }
                      case suc(m') { sub(n, m') }
                    };
 }
 
 function sub_from(Nat,Nat) -> Nat {
-  sub_from(zero, m) = m;
+  sub_from(0, m) = m;
   sub_from(suc(n), m) = sub_from(n, pred(m));
 }
 
-theorem sub_one_one: sub(suc(zero), suc(zero)) = zero
+theorem sub_one_one: sub(suc(0), suc(0)) = 0
 proof
   reflexive
 end
 
 function ≤(Nat,Nat) -> bool {
-  ≤(zero, m) = true;
+  ≤(0, m) = true;
   ≤(suc(n'), m) =
     switch m {
-      case zero { false }
+      case 0 { false }
       case suc(m') { n' ≤ m' }
     };
 }
@@ -139,7 +139,7 @@ function ≤(Nat,Nat) -> bool {
 theorem less_equal_refl: all n:Nat. n ≤ n
 proof
   induction Nat
-  case zero { . }
+  case 0 { . }
   case suc(n') { IH }
 end
 
@@ -147,10 +147,10 @@ theorem less_equal_trans: all m:Nat. all n:Nat, o:Nat.
   if m ≤ n and n ≤ o then m ≤ o
 proof
   induction Nat
-  case zero {
+  case 0 {
     any n:Nat, o:Nat;
     suppose _;
-    have zero ≤ o by .
+    have 0 ≤ o by .
   }
   case suc(m') {
     any n:Nat, o:Nat;
@@ -158,8 +158,8 @@ proof
     sm_n: suc(m') ≤ n by p;
     n_o: n ≤ o by p;
     switch n {
-      case zero {
-        sm_z: suc(m') ≤ zero by rewrite sm_n with EQ;
+      case 0 {
+        sm_z: suc(m') ≤ 0 by rewrite sm_n with EQ;
         have false by sm_z
       }
       case suc(n') {
@@ -167,8 +167,8 @@ proof
         m_n: m' ≤ n' by sm_sn;
         sn_o: suc(n') ≤ o by rewrite n_o with EQ;
         switch o {
-          case zero {
-            sn_z: suc(n') ≤ zero by rewrite sn_o with EQ;
+          case 0 {
+            sn_z: suc(n') ≤ 0 by rewrite sn_o with EQ;
             have false by sn_z
           }
           case suc(o') {
