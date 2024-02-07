@@ -21,6 +21,7 @@ default:
 	/opt/homebrew/bin/python3.10 ./poof.py test/bintree.pf
 	/opt/homebrew/bin/python3.10 ./poof.py test/induction1.pf
 	/opt/homebrew/bin/python3.10 ./poof.py Nat.pf
+	/opt/homebrew/bin/python3.10 ./poof.py NatList.pf
 
 # TODO
 

@@ -30,16 +30,76 @@ theorem length_append: all xs:NatList. all ys:NatList.
 proof
   induction NatList
   case empty {
-    any ys:NatList;
+    arbitrary ys:NatList;
+    have length(append(empty,ys)) = length(empty) + length(ys) by reflexive
+  }
+  case node(n, xs') {
+    arbitrary ys:NatList;
+    IHys: length(append(xs', ys)) = length(xs') + length(ys) by IH[ys];
+    equations
+      length(append(node(n,xs'),ys))
+          = length(node(n, append(xs', ys)))    by reflexive
+      ... = 1 + length(append(xs', ys))         by reflexive
+      ... = 1 + (length(xs') + length(ys))
+                              by rewrite goal with IHys then reflexive
+      ... = length(node(n,xs')) + length(ys)    by reflexive
+  }
+end
+
+theorem append_assoc: all xs:NatList. all ys:NatList, zs:NatList.
+  append(append(xs, ys), zs) = append(xs, append(ys, zs))
+proof
+  induction NatList
+  case empty {
+    arbitrary ys:NatList, zs:NatList;
     reflexive
   }
   case node(n, xs') {
-    any ys:NatList;
-    IHys: length(append(xs', ys)) = length(xs') + length(ys) by IH[ys];
-    transitive have length(append(node(n,xs'),ys))   = length(node(n, append(xs', ys))) by reflexive
-    transitive have length(node(n, append(xs', ys))) = 1 + length(append(xs', ys)) by reflexive
-    transitive have 1 + length(append(xs', ys))      = 1 + (length(xs') + length(ys))
-                    by rewrite goal with IHys then reflexive
-               have 1 + (length(xs') + length(ys)) = length(node(n,xs')) + length(ys) by reflexive
+    arbitrary ys:NatList, zs:NatList;
+    equations
+      append(append(node(n,xs'),ys),zs)
+          = node(n,append(append(xs',ys),zs))         by reflexive
+      ... = append(node(n,xs'),append(ys,zs))
+                                  by rewrite goal with IH[ys,zs] then reflexive
+  }
+end
+
+theorem append_empty: all xs:NatList.
+  append(xs, empty) = xs
+proof
+  induction NatList
+  case empty {
+    have append(empty, empty) = empty by reflexive
+  }
+  case node(n, xs') {
+    equations
+      append(node(n,xs'),empty)
+          = node(n,append(xs',empty))     by reflexive
+      ... = node(n,xs')                   by rewrite goal with IH then reflexive
+  }
+end
+
+function reverse(NatList) -> NatList {
+  reverse(empty) = empty;
+  reverse(node(n, next)) = append(reverse(next), node(n, empty));
+}
+
+theorem length_reverse: all xs:NatList.
+  length(reverse(xs)) = length(xs)
+proof
+  induction NatList
+  case empty {
+    have length(reverse(empty)) = length(empty) by reflexive
+  }
+  case node(n, xs') {
+    equations
+      length(reverse(node(n,xs')))
+          = length(append(reverse(xs'), node(n,empty))) by reflexive
+      ... = length(reverse(xs')) + length(node(n,empty))
+                    by rewrite goal with
+                      length_append[reverse(xs')][node(n,empty)] then reflexive
+      ... = length(xs') + 1           by rewrite goal with IH then reflexive
+      ... = length(node(n,xs'))
+                       by rewrite goal with add_one[length(xs')] then reflexive
   }
 end

@@ -24,9 +24,9 @@ proof
     have 0 + 0 = 0 by reflexive
   }
   case suc(n') {
-    transitive have suc(n') + 0 = suc(n' + 0) by reflexive
-               have suc(n' + 0) = suc(n')
-	                          by rewrite goal with IH then reflexive
+    equations
+      suc(n') + 0 = suc(n' + 0) by reflexive
+              ... = suc(n') by rewrite goal with IH then reflexive
   }
 end
 
@@ -34,36 +34,41 @@ theorem add_suc: all m:Nat. all n:Nat. m + suc(n) = suc(m + n)
 proof
   induction Nat
   case 0 {
-    any n : Nat;
+    arbitrary n : Nat;
     reflexive
   }
   case suc(n') {
-    any n : Nat;
+    arbitrary n : Nat;
     have suc(n') + suc(n) = suc(suc(n') + n) by
-    transitive have suc(n') + suc(n) = suc(n' + suc(n)) by reflexive
-    transitive have suc(n' + suc(n)) = suc(suc(n' + n))
-                                 by rewrite goal with IH[n] then reflexive
-               have suc(suc(n' + n)) = suc(suc(n') + n) by reflexive
+    equations
+    suc(n')+suc(n) = suc(n' + suc(n)) by reflexive
+               ... = suc(suc(n' + n)) by rewrite goal with IH[n] then reflexive
+               ... = suc(suc(n') + n) by reflexive
   }
-end  
+end
+
+theorem add_one: all m:Nat. m + 1 = suc(m)
+proof
+  arbitrary m:Nat;
+  equations
+    m + 1 = suc(m + 0)      by add_suc[m][0]
+      ... = suc(m)          by rewrite goal with add_zero[m] then reflexive
+end
 
 theorem add_commute: all n:Nat. all m:Nat. n + m = m + n
 proof
   induction Nat
   case 0 {
-    any m : Nat;
-    have 0 + m = m + 0 by
-    transitive have 0 + m = m by reflexive
-               have m = m + 0 by symmetric add_zero[m]
+    arbitrary m : Nat;
+    equations  0 + m = m       by reflexive
+                 ... = m + 0   by symmetric add_zero[m]
   }
   case suc(n') {
-    any m : Nat;
-    have suc(n') + m = m + suc(n') by
-    transitive have suc(n') + m = suc(n' + m) by reflexive
-    transitive have suc(n' + m) = suc(m + n')
-		   by rewrite goal with IH[m] then reflexive
-	       have suc(m + n') = m + suc(n')
-		   by symmetric add_suc[m][n']
+    arbitrary m : Nat;
+    equations
+      suc(n') + m = suc(n' + m)       by reflexive
+              ... = suc(m + n')       by rewrite goal with IH[m] then reflexive
+              ... = m + suc(n')       by symmetric add_suc[m][n']
   }
 end
 
@@ -72,16 +77,16 @@ theorem add_assoc: all m:Nat. all n:Nat, o:Nat.
 proof
   induction Nat
   case 0 {
-    any n:Nat, o:Nat;
+    arbitrary n:Nat, o:Nat;
     have (0 + n) + o = 0 + (n + o) by reflexive
   }
   case suc(m') {
-    any n:Nat, o:Nat;
-    have (suc(m') + n) + o = suc(m') + (n + o) by
-    transitive have (suc(m') + n) + o = suc((m' + n) + o) by reflexive
-    transitive have suc((m' + n) + o) = suc(m' + (n + o))
+    arbitrary n:Nat, o:Nat;
+    equations
+      (suc(m') + n) + o = suc((m' + n) + o) by reflexive
+                    ... = suc(m' + (n + o))
                                    by rewrite goal with IH[n,o] then reflexive
-	       have suc(m' + (n + o)) = suc(m') + (n + o) by reflexive
+                    ... = suc(m') + (n + o) by reflexive
   }
 end
 
@@ -90,14 +95,14 @@ theorem left_cancel: all x:Nat. all y:Nat, z:Nat.
 proof
   induction Nat
   case 0 {
-    any y:Nat, z:Nat;
+    arbitrary y:Nat, z:Nat;
     suppose prem: 0 + y = 0 + z;
-    transitive have y = 0 + y by reflexive
-    transitive have 0 + y = 0 + z by prem
-	       have 0 + z = z by reflexive
+    equations   y = 0 + y      by reflexive
+              ... = 0 + z      by prem
+              ... = z          by reflexive
   }
   case suc(x') {
-    any y:Nat, z:Nat;
+    arbitrary y:Nat, z:Nat;
     suppose prem: suc(x') + y = suc(x') + z;
     p1: suc(x' +  y) = suc(x' + z) by
       transitive have suc(x' +  y) = suc(x') + y by reflexive
@@ -157,12 +162,12 @@ theorem less_equal_trans: all m:Nat. all n:Nat, o:Nat.
 proof
   induction Nat
   case 0 {
-    any n:Nat, o:Nat;
+    arbitrary n:Nat, o:Nat;
     suppose _;
     have 0 ≤ o by .
   }
   case suc(m') {
-    any n:Nat, o:Nat;
+    arbitrary n:Nat, o:Nat;
     assume Prem : suc(m') ≤ n and n ≤ o;
     sm_n: suc(m') ≤ n by Prem;
     n_o: n ≤ o by Prem;

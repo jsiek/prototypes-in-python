@@ -584,7 +584,7 @@ class RewriteFact(Proof):
 
   def __str__(self):
       return 'rewrite_fact'
-    
+
 ################ Statements ######################################
   
 @dataclass
@@ -654,6 +654,13 @@ class Import(Statement):
 
 def mkEqual(loc, arg1, arg2):
   return Call(loc, TVar(loc, '='), [arg1, arg2], True)
+
+def split_equation(loc, equation):
+  match equation:
+    case Call(loc1, TVar(loc2, '='), [L, R], _):
+      return (L, R)
+    case _:
+      error(loc, 'expected an equality, not ' + str(equation))
 
 def mkZero(loc):
   return TVar(loc, 'zero')

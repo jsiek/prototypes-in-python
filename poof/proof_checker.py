@@ -182,13 +182,6 @@ def pattern_to_term(pat):
     case _:
       error(pat.location, "expected a pattern, not " + str(pat))
 
-def split_equation(loc, equation):
-  match equation:
-    case Call(loc1, TVar(loc2, '='), [L, R], _):
-      return (L, R)
-    case _:
-      error(loc, 'expected an equality, not ' + str(equation))
-
 def rewrite(loc, formula, equation):
   (lhs, rhs) = split_equation(loc, equation)
   # print('rewrite? ' + str(formula) \

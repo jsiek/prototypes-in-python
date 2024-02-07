@@ -277,6 +277,30 @@ def parse_tree_to_ast(e):
         subject = parse_tree_to_ast(e.children[0])
         eq = parse_tree_to_ast(e.children[1])
         return RewriteFact(e.meta, subject, eq)
+    elif e.data == 'equation':
+        lhs = parse_tree_to_ast(e.children[0])
+        rhs = parse_tree_to_ast(e.children[1])
+        reason = parse_tree_to_ast(e.children[2])
+        return (lhs, rhs, reason)
+    elif e.data == 'half_equation':
+        rhs = parse_tree_to_ast(e.children[0])
+        reason = parse_tree_to_ast(e.children[1])
+        return (rhs, reason)
+    elif e.data == 'equations_proof':
+        first = parse_tree_to_ast(e.children[0])
+        rest = parse_tree_to_list(e.children[1])
+        eqs = [first]
+        for (rhs, reason) in rest:
+            lhs = eqs[-1][1] # previous right-hand side
+            eqs.append((lhs, rhs, reason))
+        result = None
+        for (lhs, rhs, reason) in reversed(eqs):
+            eq_proof = PAnnot(e.meta, mkEqual(e.meta, lhs, rhs), reason)
+            if result == None:
+                result = eq_proof
+            else:
+                result = PTransitive(e.meta, eq_proof, result)
+        return result
     
     # constructor declaration
     elif e.data == 'constr_id':

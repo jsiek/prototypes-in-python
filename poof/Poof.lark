@@ -67,6 +67,13 @@ COMMENT: /\/\*([^\*]|\*+[^\/])*\*+\//
 ?ind_case_list: ind_case                           -> single
     | ind_case ind_case_list                       -> push
 
+?equation: term "=" term_add "by" proof            -> equation
+
+?half_equation:  "..." "=" term_add "by" proof     -> half_equation
+
+?equation_list: half_equation                      -> single
+    | half_equation equation_list                  -> push
+ 
 ?proof: "have" formula "by" proof                        -> annot
     | "apply" proof "with" proof                         -> apply
     | proof "," proof                                    -> tuple
@@ -74,12 +81,13 @@ COMMENT: /\/\*([^\*]|\*+[^\/])*\*+\//
     | "suppose" IDENT ":" formula ";" proof              -> imp_intro_explicit
     | "assume" IDENT ";" proof                          -> imp_intro
     | "assume" IDENT ":" formula ";" proof              -> imp_intro_explicit
-    | "any"  var_list ";" proof                          -> all_intro
+    | "arbitrary"  var_list ";" proof                    -> all_intro
     | "cases" proof case_list                            -> cases
     | "induction" IDENT ind_case_list                    -> induction
     | "rewrite" "goal" "with" proof "then" proof         -> rewrite_goal
     | "rewrite" proof "with" proof                       -> rewrite_fact
     | "switch" term "{" ind_case_list "}"                -> switch_proof
+    | "equations" equation equation_list                 -> equations_proof
     | proof_hi
 
 ?proof_hi: 
