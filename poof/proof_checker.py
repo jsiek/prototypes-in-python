@@ -76,78 +76,6 @@ def instantiate(loc, allfrm, args):
     case _:
       error(loc, 'expected all formula to instantiate, not ' + str(allfrm))
   
-def check_proof(proof, env, type_env):
-  if verbose:
-    print('synthesize formula while checking proof') ; print('\t' + str(proof))
-  ret = None
-  match proof:
-    case RewriteFact(loc, subject, equation_proof):
-      formula = check_proof(subject, env, type_env)
-      equation = check_proof(equation_proof, env, type_env)
-      new_formula = rewrite(loc, formula, equation)
-      return new_formula
-    case PHole(loc):
-      error(loc, 'unfinished proof')
-    case PVar(loc, name):
-      if name in env.keys():
-        ret = env[name]
-      else:
-        error(loc, 'undefined identifier ' + name)
-    case PTrue(loc):
-      ret = Bool(loc, True)
-    case PLet(loc, label, frm, reason, rest):
-      check_proof_of(reason, frm, env, type_env)
-      new_env = copy_dict(env)
-      new_env[label] = frm
-      ret = check_proof(rest, new_env, type_env)
-    case PAnnot(loc, claim, reason):
-      check_proof_of(reason, claim, env, type_env)
-      ret = claim
-    case PTuple(loc, pfs):
-      frms = [check_proof(pf, env, type_env) for pf in pfs]
-      ret = And(loc, frms)
-    case ImpIntro(loc, label, prem, body):
-      new_env = copy_dict(env)
-      new_env[label] = prem
-      conc = check_proof(body, new_env, type_env)
-      ret = IfThen(loc, prem, conc)
-    case AllIntro(loc, vars, body):
-      formula = check_proof(body, env, type_env)
-      ret = All(loc, vars, formula)
-    case AllElim(loc, univ, args):
-      allfrm = check_proof(univ, env, type_env)
-      return instantiate(loc, allfrm, args)
-    case Apply(loc, imp, arg):
-      ifthen = check_proof(imp, env, type_env)
-      match ifthen:
-        case IfThen(loc, prem, conc):
-          check_proof_of(arg, prem, env, type_env)
-          ret = conc
-        case _:
-          error(loc, 'expected an if-then, not ' + str(ifthen))
-    case PInjective(loc, eq_pf):
-      formula = check_proof(eq_pf, env, type_env)
-      (a,b) = split_equation(loc, formula)
-      match (a,b):
-        case (Call(loc2,TVar(loc3,f1),[arg1], infix1),
-              Call(loc4,TVar(loc5,f2),[arg2]), infix2):
-          if f1 != f2:
-            error(loc, 'in injective, ' + f1 + ' ≠ ' + f2)
-          if not is_constructor(f1, env):
-            error(loc, 'in injective, ' + f1 + ' not a constructor')
-          return mkEqual(loc, arg1, arg2)
-        case _:
-          error(loc, 'in injective, non-applicable formula: ' + str(formula))
-    case PSymmetric(loc, eq_pf):
-      frm = check_proof(eq_pf, env, type_env)
-      (a,b) = split_equation(loc, frm)
-      return mkEqual(loc, b, a)
-    case _:
-      error(proof.location, 'in check_proof, unhandled ' + str(proof))
-  if verbose:
-    print('\t=> ' + str(ret))
-  return ret
-
 def str_of_env(env):
   return '{' + ', '.join([k + ": " + str(e) for (k,e) in env.items()]) + '}'
 
@@ -234,6 +162,79 @@ def facts_to_str(env):
     if isinstance(p, Formula) or isinstance(p, Term):
       result += x + ': ' + str(p) + '\n'
   return result
+
+def check_proof(proof, env, type_env):
+  if verbose:
+    print('synthesize formula while checking proof') ; print('\t' + str(proof))
+  ret = None
+  match proof:
+    case RewriteFact(loc, subject, equation_proof):
+      formula = check_proof(subject, env, type_env)
+      equation = check_proof(equation_proof, env, type_env)
+      new_formula = rewrite(loc, formula, equation)
+      return new_formula
+    case PHole(loc):
+      error(loc, 'unfinished proof')
+    case PVar(loc, name):
+      if name in env.keys():
+        ret = env[name]
+      else:
+        error(loc, 'undefined identifier ' + name)
+    case PTrue(loc):
+      ret = Bool(loc, True)
+    case PLet(loc, label, frm, reason, rest):
+      check_proof_of(reason, frm, env, type_env)
+      new_env = copy_dict(env)
+      new_env[label] = frm
+      ret = check_proof(rest, new_env, type_env)
+    case PAnnot(loc, claim, reason):
+      check_proof_of(reason, claim, env, type_env)
+      ret = claim
+    case PTuple(loc, pfs):
+      frms = [check_proof(pf, env, type_env) for pf in pfs]
+      ret = And(loc, frms)
+    case ImpIntro(loc, label, prem, body):
+      new_env = copy_dict(env)
+      new_env[label] = prem
+      conc = check_proof(body, new_env, type_env)
+      ret = IfThen(loc, prem, conc)
+    case AllIntro(loc, vars, body):
+      formula = check_proof(body, env, type_env)
+      ret = All(loc, vars, formula)
+    case AllElim(loc, univ, args):
+      allfrm = check_proof(univ, env, type_env)
+      return instantiate(loc, allfrm, args)
+    case Apply(loc, imp, arg):
+      ifthen = check_proof(imp, env, type_env)
+      match ifthen:
+        case IfThen(loc, prem, conc):
+          check_proof_of(arg, prem, env, type_env)
+          ret = conc
+        case _:
+          error(loc, 'expected an if-then, not ' + str(ifthen))
+    case PInjective(loc, eq_pf):
+      formula = check_proof(eq_pf, env, type_env)
+      (a,b) = split_equation(loc, formula)
+      match (a,b):
+        case (Call(loc2,TVar(loc3,f1),[arg1], infix1),
+              Call(loc4,TVar(loc5,f2),[arg2]), infix2):
+          if f1 != f2:
+            error(loc, 'in injective, ' + f1 + ' ≠ ' + f2)
+          if not is_constructor(f1, env):
+            error(loc, 'in injective, ' + f1 + ' not a constructor')
+          return mkEqual(loc, arg1, arg2)
+        case _:
+          error(loc, 'in injective, non-applicable formula: ' + str(formula))
+    case PSymmetric(loc, eq_pf):
+      frm = check_proof(eq_pf, env, type_env)
+      (a,b) = split_equation(loc, frm)
+      return mkEqual(loc, b, a)
+    case _:
+      error(proof.location, 'in check_proof, unhandled ' + str(proof))
+  if verbose:
+    print('\t=> ' + str(ret))
+  return ret
+
 
 def check_proof_of(proof, formula, env, type_env):
   if verbose:
