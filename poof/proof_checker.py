@@ -129,10 +129,10 @@ def check_proof(proof, env, type_env):
       formula = check_proof(eq_pf, env, type_env)
       (a,b) = split_equation(loc, formula)
       match (a,b):
-        case (Call(loc2,TVar(loc3,f1),[arg1]),
-              Call(loc4,TVar(loc5,f2),[arg2])):
+        case (Call(loc2,TVar(loc3,f1),[arg1], infix1),
+              Call(loc4,TVar(loc5,f2),[arg2]), infix2):
           if f1 != f2:
-            error(loc, 'in injective, ' + f1 + ' != ' + f2)
+            error(loc, 'in injective, ' + f1 + ' ≠ ' + f2)
           if not is_constructor(f1, env):
             error(loc, 'in injective, ' + f1 + ' not a constructor')
           return mkEqual(loc, arg1, arg2)
@@ -180,7 +180,8 @@ def substitute(sub, frm):
     #   ret = PrimitiveCall(loc, op, [substitute(sub, arg) for arg in args])
     case Call(loc, rator, args, infix):
       ret = Call(loc, substitute(sub, rator),
-                 [substitute(sub, arg) for arg in args], infix)
+                 [substitute(sub, arg) for arg in args],
+                 infix)
     case _:
       error(frm.location, 'in substitute, unhandled ' + str(frm))
   # print('substitute ' + str(frm) + ' via ' + str_of_env(sub) \
@@ -191,7 +192,8 @@ def pattern_to_term(pat):
   match pat:
     case PatternCons(loc, constr, params):
       if len(params) > 0:
-        return Call(loc, TVar(loc, constr), [TVar(loc, param) for param in params])
+        return Call(loc, TVar(loc, constr), [TVar(loc, param) for param in params],
+                    False)
       else:
         return TVar(loc, constr)
     case _:
@@ -221,7 +223,8 @@ def rewrite(loc, formula, equation):
     #                        [rewrite(loc, arg, equation) for arg in args])
     case Call(loc2, rator, args, infix):
       return Call(loc2, rewrite(loc, rator, equation),
-                  [rewrite(loc, arg, equation) for arg in args], infix)
+                  [rewrite(loc, arg, equation) for arg in args],
+                  infix)
     case _:
       error(loc, 'in rewrite, unhandled ' + str(formula))
 
@@ -248,8 +251,8 @@ def check_proof_of(proof, formula, env, type_env):
           rhsNF = rhs.reduce(env)
           # print('reflexive: ' + str(lhsNF) + ' =? ' + str(rhsNF))
           if lhsNF != rhsNF:
-            error(proof.location, 'error in reflexive proof: ' \
-                  + str(lhsNF) + ' != ' + str(rhsNF))
+            error(proof.location, 'error in proof by reflexive:\n' \
+                  + str(lhsNF) + ' ≠ ' + str(rhsNF))
         case _:
           error(proof.location, 'reflexive proves an equality, not ' \
                 + str(formula))
@@ -265,12 +268,12 @@ def check_proof_of(proof, formula, env, type_env):
       (a2,b) = split_equation(loc, eq1)
       check_proof_of(eq_pf2, mkEqual(loc, b, c), env, type_env)
       if a1 != a2:
-        error(loc, 'for transitive, ' + str(a1) + ' != ' + str(a2))
+        error(loc, 'for transitive, ' + str(a1) + ' ≠ ' + str(a2))
 
     case PInjective(loc, eq_pf):
       (a,b) = split_equation(loc, formula)
-      flip_formula = mkEqual(loc, Call(loc, TVar(loc,'suc'), [a]),
-                             Call(loc, TVar(loc,'suc'), [b]))
+      flip_formula = mkEqual(loc, Call(loc, TVar(loc,'suc'), [a], False),
+                             Call(loc, TVar(loc,'suc'), [b], False))
       check_proof_of(eq_pf, flip_formula, env, type_env)
         
     case AllIntro(loc, vars, body):
@@ -300,7 +303,7 @@ def check_proof_of(proof, formula, env, type_env):
           new_env[label] = prem2
           if prem1.reduce(env) != prem2.reduce(env):
             error(loc, 'mismatch in premise:\n' \
-                  + str(prem1) + ' != ' + str(prem2))
+                  + str(prem1) + ' ≠ ' + str(prem2))
           check_proof_of(body, conc, new_env, type_env)
         case _:
           error(proof.location, 'expected proof of if-then, not ' + str(proof))
@@ -406,7 +409,7 @@ def synth_term(term, type_env, env, recfun, subterms):
         return type_env[name]
       else:
         error(loc, 'undefined name ' + name)
-    case Call(loc, TVar(loc2, name), args) if name == recfun:
+    case Call(loc, TVar(loc2, name), args, infix) if name == recfun:
       # print('************* check recursive call ' + str(term))
       match args[0]:
         case TVar(loc3, arg_name):
@@ -420,7 +423,7 @@ def synth_term(term, type_env, env, recfun, subterms):
                 + " or ".join(subterms) + ", not " + str(args[0]))
       return type_check_call(loc, TVar(loc2,name), args, type_env, env,
                              recfun, subterms)
-    case Call(loc, rator, args):
+    case Call(loc, rator, args, infix):
       # print('************* check non-recursive call ' + str(term))
       return type_check_call(loc, rator, args, type_env, env, recfun, subterms)
     case Switch(loc, subject, cases):
@@ -435,7 +438,7 @@ def synth_term(term, type_env, env, recfun, subterms):
           result_type = case_type
         elif case_type != result_type:
           error(c.location, 'bodies of cases must have same type, but ' \
-                + str(case_type) + ' != ' + str(result_type))
+                + str(case_type) + ' ≠ ' + str(result_type))
         return result_type
     case _:
       error(term.location, 'cannot deduce a type for ' + str(term))

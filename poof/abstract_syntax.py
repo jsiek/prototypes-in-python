@@ -242,7 +242,7 @@ def is_match(pattern, arg, subst):
             TVar(loc2, name)):
         ret = constr == name
       case (PatternCons(loc1, constr, params),
-            Call(loc2, TVar(loc3, name), args)):
+            Call(loc2, TVar(loc3, name), args, infix)):
         if constr == name and len(params) == len(args):
             for (k,v) in zip(params, args):
                 subst[k] = v
@@ -257,7 +257,7 @@ def is_match(pattern, arg, subst):
 class Call(Term):
   rator: Term
   args: list[Term]
-  infix: bool = False
+  infix: bool
   
   def __str__(self):
     if self.infix:
@@ -298,15 +298,16 @@ class Call(Term):
                   for (k,v) in zip(fun_case.parameters, rest_args):
                       new_env[k] = v.reduce(env)
                   return fun_case.body.reduce(new_env)
-          ret = Call(self.location, fun, args)
+          ret = Call(self.location, fun, args, self.infix)
         case _:
-          ret = Call(self.location, fun, args)
+          ret = Call(self.location, fun, args, self.infix)
       # print('reduce call ' + str(self) + ' to ' + str(ret))
       return ret
 
   def substitute(self, env):
       return Call(self.location, self.rator.substitute(env),
-                  [arg.substitute(env) for arg in self.args])
+                  [arg.substitute(env) for arg in self.args],
+                  self.infix)
 
 @dataclass
 class SwitchCase(AST):
@@ -631,7 +632,7 @@ class RecFun(Statement):
     cases: List[FunCase]
 
     def __str__(self):
-      return '`' + self.name + '`'
+      return self.name
 
     def __repr__(self):
       return str(self)
@@ -678,7 +679,7 @@ def isNat(t):
   match t:
     case TVar(loc, 'zero'):
       return True
-    case Call(loc, TVar(loc2, 'suc'), [arg]):
+    case Call(loc, TVar(loc2, 'suc'), [arg], infix):
       return isNat(arg)
     case _:
       return False
@@ -687,7 +688,7 @@ def natToInt(t):
   match t:
     case TVar(loc, 'zero'):
       return 0
-    case Call(loc, TVar(loc2, 'suc'), [arg]):
+    case Call(loc, TVar(loc2, 'suc'), [arg], infix):
       return 1 + natToInt(arg)
 
   

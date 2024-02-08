@@ -175,7 +175,7 @@ def parse_tree_to_ast(e):
     elif e.data == 'call':
         rator = parse_tree_to_ast(e.children[0])
         rands = parse_tree_to_list(e.children[1])
-        return Call(e.meta, rator, rands)
+        return Call(e.meta, rator, rands, False)
     elif e.data == 'lambda':
         return Lambda(e.meta,
                       parse_tree_to_str_list(e.children[0]),
