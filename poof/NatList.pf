@@ -130,3 +130,23 @@ proof
     ... = append(reverse(ys), reverse(node(n,xs'))) by reflexive
   }
 end
+
+theorem reverse_reverse: all ls:NatList.
+  reverse(reverse(ls)) = ls
+proof
+  induction NatList
+  case empty {
+    have reverse(reverse(empty)) = empty by reflexive
+  }
+  case node(n, ls') {
+    equations
+      reverse(reverse(node(n,ls')))
+          = reverse(append(reverse(ls'), node(n,empty))) by reflexive
+      ... = append(reverse(node(n,empty)), reverse(reverse(ls')))
+                  by reverse_append[reverse(ls')][node(n,empty)]
+      ... = append(reverse(node(n,empty)), ls') by rewrite goal with IH then reflexive
+      ... = append(node(n,empty), ls') by reflexive
+      ... = node(n,ls') by reflexive
+  }
+end
+
