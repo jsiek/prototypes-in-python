@@ -163,6 +163,42 @@ def facts_to_str(env):
       result += x + ': ' + str(p) + '\n'
   return result
 
+def isolate_difference_list(list1, list2):
+  for (t1, t2) in zip(list1, list2):
+    diff = isolate_difference(t1, t2)
+    if diff:
+      return diff
+  return None
+  
+def isolate_difference(term1, term2):
+  if term1 == term2:
+    return None
+  else:
+    match (term1, term2):
+      case (Lambda(l1, v1, body1), Lambda(l2, v2, body2)):
+        if v1 == v2:
+          return isolate_difference(body1, body2)
+        else:
+          return (v1, v2)
+      case (Call(l1, fun1, args1, infix1), Call(l2, fun2, args2, infix2)):
+        if fun1 == fun2:
+          return isolate_difference_list(args1, args2)
+        else:
+          return (fun1, fun2)
+      case (SwitchCase(l1, p1, body1), SwitchCase(l2, p2, body2)):
+        if p1 == p2:
+          return isolate_difference(body1, body2)
+        else:
+          return (p1, p2)
+      case (Switch(l1, s1, cs1), Switch(l2, s2, cs2)):
+        if s1 == s2:
+          return isolate_difference_list(cs1, cs2)
+        else:
+          return (s1, s2)
+      case _:
+        return (term1, term2)
+    
+
 def check_proof(proof, env, type_env):
   if verbose:
     print('synthesize formula while checking proof') ; print('\t' + str(proof))
@@ -252,8 +288,14 @@ def check_proof_of(proof, formula, env, type_env):
           rhsNF = rhs.reduce(env)
           # print('reflexive: ' + str(lhsNF) + ' =? ' + str(rhsNF))
           if lhsNF != rhsNF:
-            error(proof.location, 'error in proof by reflexive:\n' \
-                  + str(lhsNF) + ' ≠ ' + str(rhsNF))
+            (lhs,rhs) = isolate_difference(lhsNF, rhsNF)
+            msg = 'error in proof by reflexive:\n'
+            if lhs == lhsNF:
+              msg = msg + str(lhsNF) + ' ≠ ' + str(rhsNF)
+            else:
+              msg = msg + str(lhs) + ' ≠ ' + str(rhs) + '\n' \
+                + 'therefore\n' + str(lhsNF) + ' ≠ ' + str(rhsNF)
+            error(proof.location, msg)
         case _:
           error(proof.location, 'reflexive proves an equality, not ' \
                 + str(formula))
