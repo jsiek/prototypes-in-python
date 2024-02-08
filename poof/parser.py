@@ -45,13 +45,13 @@ def parse_tree_to_list(e):
     elif e.data == 'empty_binding':
         return tuple([])
     elif e.data == 'single_binding':
-        var = parse_tree_to_ast(e.children[0])
+        ident = parse_tree_to_ast(e.children[0])
         typ = parse_tree_to_ast(e.children[1])
-        return tuple([(var,typ)])
+        return tuple([(str(ident.value),typ)])
     elif e.data == 'push_binding':
-        var = parse_tree_to_ast(e.children[0])
+        ident = parse_tree_to_ast(e.children[0])
         typ = parse_tree_to_ast(e.children[1])
-        return tuple([(var,typ)]) + parse_tree_to_list(e.children[2])
+        return tuple([(str(ident.value),typ)]) + parse_tree_to_list(e.children[2])
     else:
         raise Exception('parse_tree_to_str_list, unexpected ' + str(e))
 

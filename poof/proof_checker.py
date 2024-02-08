@@ -12,6 +12,15 @@ def get_verbose():
   global verbose
   return verbose
 
+name_id = 0
+
+def generate_name(name):
+    global name_id
+    ls = name.split('.')
+    new_id = name_id
+    name_id += 1
+    return ls[0] + '.' + str(new_id)
+  
 def check_implies(loc, frm1, frm2):
   if verbose:
     print('check_implies? ' + str(frm1) + ' => ' + str(frm2))
@@ -52,11 +61,13 @@ def check_implies(loc, frm1, frm2):
           if frm1 != frm2:
             error(loc, 'expected ' + str(frm2) + '\nbut only have ' + str(frm1))
 
+
+            
 def instantiate(loc, allfrm, args):
   match allfrm:
     case All(loc2, vars, frm):
       if len(args) == len(vars):
-        sub = {var[0].value: arg for (var,arg) in zip(vars,args)}
+        sub = {var[0]: arg for (var,arg) in zip(vars,args)}
         ret = substitute(sub, frm)
         return ret
       else:
@@ -157,10 +168,14 @@ def substitute(sub, frm):
       ret = IfThen(loc, substitute(sub, prem), substitute(sub, conc))
     case All(loc, vars, frm2):
       # TODO: alpha rename
-      new_sub = copy_dict(sub)
-      for var in vars:
-        new_sub[var[0]] = TVar(loc,var[0])
-      ret = All(loc, vars, substitute(new_sub, frm2))
+      new_vars = [(generate_name(var[0]),var[1]) for var in vars]
+      ren = {var[0]: TVar(loc, new_var[0]) \
+              for (var,new_var) in zip(vars, new_vars)}
+      frm3 = substitute(ren, frm2)
+      # new_sub = copy_dict(sub)
+      # for var in vars:
+      #   new_sub[var[0]] = TVar(loc,var[0])
+      ret = All(loc, new_vars, substitute(sub, frm3))
     # case PrimitiveCall(loc, op, args):
     #   ret = PrimitiveCall(loc, op, [substitute(sub, arg) for arg in args])
     case Call(loc, rator, args, infix):

@@ -39,6 +39,7 @@ proof
   }
   case suc(n') {
     arbitrary n : Nat;
+    IHn: n' + suc(n) = suc(n' + n) by IH[n];
     have suc(n') + suc(n) = suc(suc(n') + n) by
     equations
     suc(n')+suc(n) = suc(n' + suc(n)) by reflexive
