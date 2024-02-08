@@ -1,0 +1,16 @@
+import Nat
+
+union List<T> {
+  empty;
+  node(T, List<T>);
+}
+
+function <T> length(List<T>) -> Nat {
+  length(empty) = 0;
+  length(node(n, next)) = 1 + length(next);
+}
+
+theorem length_empty: all T:type. length<T>(empty) = 0
+proof
+  reflexive
+end
