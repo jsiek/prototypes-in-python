@@ -241,6 +241,7 @@ def check_proof(proof, env, type_env):
       frms = [check_proof(pf, env, type_env) for pf in pfs]
       ret = And(loc, frms)
     case ImpIntro(loc, label, prem, body):
+      check_formula(prem, env, type_env)
       new_env = copy_dict(env)
       new_env[label] = prem
       conc = check_proof(body, new_env, type_env)
@@ -361,6 +362,7 @@ def check_proof_of(proof, formula, env, type_env):
         case _:
           error(proof.location, 'expected proof of if-then, not ' + str(proof))
     case ImpIntro(loc, label, prem1, body):
+      check_formula(prem1, env, type_env)
       match formula:
         case IfThen(loc, prem2, conc):
           new_env = copy_dict(env)
@@ -373,6 +375,7 @@ def check_proof_of(proof, formula, env, type_env):
           error(proof.location, 'expected proof of if-then, not ' + str(proof))
       
     case PLet(loc, label, frm, reason, rest):
+      check_formula(frm, env, type_env)
       check_proof_of(reason, frm, env, type_env)
       new_env = copy_dict(env)
       new_env[label] = frm
