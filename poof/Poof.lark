@@ -3,7 +3,7 @@ INT: DIGIT+
 UPPER: /[A-Z]/
 LOWER: /[a-z]/
 OPERATOR: /[\+\-*%=≠<>≤≥&]/
-IDENT: (/_/|UPPER|LOWER|OPERATOR) (/_/|UPPER|LOWER|DIGIT|OPERATOR|/[₀₁₂₃₄₅₆₇₈₉!?']/)*
+IDENT: (/_/|UPPER|LOWER|OPERATOR) (/_/|UPPER|LOWER|DIGIT|/[₀₁₂₃₄₅₆₇₈₉!?']/)*
 NEWLINE: (/\r/? /\n/)+
 WS: /[ \t\f\r\n]/+
 LINECOMMENT: "//" /[^\n]*/ NEWLINE
@@ -15,6 +15,7 @@ COMMENT: /\/\*([^\*]|\*+[^\/])*\*+\//
     | term ">" term_add                        -> greater
     | term "≤" term_add                       -> less_equal
     | term "≥" term_add                       -> greater_equal
+    | term ":" type                           -> annote_type
     | term_add
 
 ?term_add: term_add "+" term_med                   -> add
@@ -36,6 +37,7 @@ COMMENT: /\/\*([^\*]|\*+[^\/])*\*+\//
     | "true"                                       -> true_literal
     | "false"                                      -> false_literal
     | IDENT                                        -> term_var
+    | term_hi "<" type_list ">"                    -> term_inst
     | "-" term_hi                                  -> neg
     | term_hi "(" term_list ")"                    -> call
     | "λ" ident_list "{" term "}"                  -> lambda
@@ -109,24 +111,29 @@ COMMENT: /\/\*([^\*]|\*+[^\/])*\*+\//
 
 ?theorem: "theorem" IDENT ":" formula "proof" proof "end" -> theorem
 
-?type: "(" type_list ")" "->" type                                -> function_type
+?type: type_params_opt "(" type_list ")" "->" type        -> function_type
+ | IDENT "<" type_list ">"                     -> type_inst
  | type_hi
 
 ?type_hi: IDENT   -> type_name
  | "int"          -> int_type
  | "bool"         -> bool_type
+ | "type"         -> type_type
 
 ?type_list:                                      -> empty
     | type                                       -> single
     | type "," type_list                         -> push
-    
+
+?type_params_opt:                                -> empty
+   | "<" ident_list ">"
+
 ?constr: IDENT ";"                               -> constr_id
     | IDENT "(" type_list ")" ";"                -> constr_apply
 
 ?constr_list: constr                             -> single
     | constr constr_list                         -> push
     
-?union: "union" IDENT "{" constr_list "}"        -> union
+?union: "union" IDENT type_params_opt "{" constr_list "}" -> union
 
 ?pattern: IDENT                                  -> pattern_id
     | "0"                                        -> pattern_zero
@@ -141,7 +148,7 @@ COMMENT: /\/\*([^\*]|\*+[^\/])*\*+\//
 ?fun_case_list: fun_case                               -> single
     | fun_case fun_case_list                           -> push
     
-?rec_function: "function" IDENT "(" type_list ")" "->" type "{" fun_case_list "}" -> rec_fun
+?rec_function: "function" IDENT type_params_opt "(" type_list ")" "->" type "{" fun_case_list "}" -> rec_fun
 
 ?definition: "define" IDENT "is" term                  -> define
 

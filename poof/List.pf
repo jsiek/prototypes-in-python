@@ -5,12 +5,20 @@ union List<T> {
   node(T, List<T>);
 }
 
-function <T> length(List<T>) -> Nat {
+function length<E>(List<E>) -> Nat {
   length(empty) = 0;
   length(node(n, next)) = 1 + length(next);
 }
 
-theorem length_empty: all T:type. length<T>(empty) = 0
+theorem length_empty: all U:type. length<U>(empty) = 0
 proof
+  arbitrary T:type;
+  reflexive
+end
+
+theorem length_one: all U:type. all x:U. length(node(x, empty)) = 1
+proof
+  arbitrary T:type;
+  arbitrary x:T;
   reflexive
 end

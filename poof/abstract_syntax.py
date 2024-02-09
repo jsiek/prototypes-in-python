@@ -80,10 +80,60 @@ class BoolType(Type):
     return isinstance(other, BoolType)
 
 @dataclass
-class FunctionType(Type):
-    param_types: List[Type]
-    return_type: Type
+class TypeType(Type):
+  def __str__(self):
+    return 'type'
 
+  def __repr__(self):
+    return str(self)
+
+  def __eq__(self, other):
+    return isinstance(other, TypeType)
+  
+@dataclass
+class FunctionType(Type):
+  type_params: List[str]
+  param_types: List[Type]
+  return_type: Type
+
+  def __str__(self):
+    if len(self.type_params) > 0:
+      prefix = '<' + ','.join([x for x in self.type_params]) + '>'
+    else:
+      prefix = ''
+    return prefix + '(' + ','.join([str(ty) for ty in self.param_types]) + ')'\
+      + ' -> ' + str(self.return_type)
+  
+@dataclass
+class TypeInst(Type):
+  name: str
+  arg_types: List[Type]
+
+  def __str__(self):
+    return self.name + \
+      '<' + ','.join([str(arg) for arg in self.arg_types]) + '>'
+
+  def __repr__(self):
+    return str(self)
+
+  def __eq__(self, other):
+    if not isinstance(other, TypeInst):
+      return False
+    return self.name == other.name and \
+      all([t1 == t2 for (t1, t2) in zip(self.arg_types, other.arg_types)])
+
+# This is the type of a constructor such as 'empty' of a generic union
+# when we do not yet know the type arguments.
+@dataclass
+class GenericType(Type):
+  name: str
+
+  def __str__(self):
+    return self.name + '<?>'
+
+  def __eq__(self, other):
+    return False
+  
 ################ Patterns ######################################
 
 @dataclass
@@ -104,6 +154,24 @@ class PatternCons(Pattern):
 ################ Terms ######################################
 
 @dataclass
+class TAnnote(Term):
+  subject: Term
+  typ: Type
+
+  def __str__(self):
+      return str(self.subject) + ':' + str(self.typ)
+    
+  def __repr__(self):
+      return str(self)
+    
+  def reduce(self, env):
+    return self.subject.reduce(env)
+  
+  def substitute(self, env):
+    return TAnnote(self.location, self.subject.substitute(env), self.typ)
+  
+  
+@dataclass
 class TVar(Term):
   name: str
 
@@ -119,6 +187,9 @@ class TVar(Term):
       else:
         return self.name
 
+  def __repr__(self):
+      return str(self)
+    
   def reduce(self, env):
       if self.name in env:
           return env[self.name]
@@ -286,7 +357,7 @@ class Call(Term):
           for (x,arg) in zip(vars, args):
             new_env[x] = arg
           ret = body.reduce(new_env)
-        case RecFun(loc, name, params, returns, cases):
+        case RecFun(loc, name, typarams, params, returns, cases):
           first_arg = args[0]
           rest_args = args[1:]
           for fun_case in cases:
@@ -359,7 +430,26 @@ class Switch(Term):
       return Switch(self.location, self.subject.substitute(env),
                     [c.substitute(env) for c in self.cases])
   
-  
+
+@dataclass
+class TermInst(Term):
+  subject: Term
+  type_args: List[Type]
+
+  def __str__(self):
+    return str(self.subject) + \
+      '<' + ','.join([str(ty) for ty in self.type_args]) + '>'
+
+  def __repr__(self):
+      return str(self)
+
+  def reduce(self, env):
+    # TODO: reduce type_args?
+    # return TermInst(self.location, self.subject.reduce(env), self.type_args)
+    # Type Erasure?
+    return self.subject.reduce(env)
+
+    
 ################ Formulas ######################################
   
 @dataclass
@@ -497,7 +587,7 @@ class AllIntro(Proof):
 
   def __str__(self):
     return 'arbitrary ' + ",".join([x + ":" + str(t) for (x,t) in self.vars]) \
-        + '{' + str(self.body) + '}'
+        + '; ' + str(self.body)
 
 @dataclass
 class AllElim(Proof):
@@ -609,6 +699,7 @@ class Constructor(AST):
 @dataclass
 class Union(Statement):
     name: str
+    type_params: List[str]
     alternatives: List[Constructor]
 
 @dataclass
@@ -627,6 +718,7 @@ class FunCase(AST):
 @dataclass
 class RecFun(Statement):
     name: str
+    type_params: List[str]
     params: List[Type]
     returns: Type
     cases: List[FunCase]
