@@ -20,19 +20,6 @@ function reverse<E>(List<E>) -> List<E> {
   reverse(node(n, next)) = append(reverse(next), node(n, empty));
 }
 
-theorem length_empty: all U :type. length<U>(empty) = 0
-proof
-  arbitrary T:type;
-  reflexive
-end
-
-theorem length_one: all U :type. all x :U. length(node(x, empty)) = 1
-proof
-  arbitrary T:type;
-  arbitrary x:T;
-  reflexive
-end
-
 theorem length_append: all U :type. all xs :List<U>. all ys :List<U>.
   length(append(xs, ys)) = length(xs) + length(ys)
 proof
@@ -44,13 +31,12 @@ proof
   }
   case node(n, xs') {
     arbitrary ys :List<U>;
-    IHys: length(append(xs', ys)) = length(xs') + length(ys) by IH[ys];
     equations
       length(append(node(n,xs'),ys))
           = length(node(n, append(xs', ys)))    by reflexive
       ... = 1 + length(append(xs', ys))         by reflexive
       ... = 1 + (length(xs') + length(ys))
-                              by rewrite goal with IHys then reflexive
+                              by rewrite goal with IH[ys] then reflexive
       ... = length(node(n,xs')) + length(ys)    by reflexive
   }
 end
