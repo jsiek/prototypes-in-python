@@ -270,9 +270,9 @@ def parse_tree_to_ast(e):
                      parse_tree_to_ast(e.children[0]),
                      parse_tree_to_case_list(e.children[1]))
     elif e.data == 'induction':
-        type_name = str(e.children[0].value)
+        typ = parse_tree_to_ast(e.children[0])
         cases = parse_tree_to_list(e.children[1])
-        return Induction(e.meta, type_name, cases)
+        return Induction(e.meta, typ, cases)
     elif e.data == 'switch_proof':
         subject = parse_tree_to_ast(e.children[0])
         cases = parse_tree_to_list(e.children[1])

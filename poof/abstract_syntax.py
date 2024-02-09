@@ -55,7 +55,6 @@ class TypeName(Type):
       return False
     return self.name == other.name
 
-
 @dataclass
 class IntType(Type):
     
@@ -103,7 +102,17 @@ class FunctionType(Type):
       prefix = ''
     return prefix + '(' + ','.join([str(ty) for ty in self.param_types]) + ')'\
       + ' -> ' + str(self.return_type)
-  
+
+  def __eq__(self, other):
+    match other:
+      case FunctionType(l2, tv2, pts2, rt2):
+        ret = True
+        for (pt1, pt2) in zip(self.param_types, pts2):
+          ret = ret and type_equal(pt1, pt2)
+        return ret and type_equal(self.return_type, rt2)
+      case _:
+        return False
+      
 @dataclass
 class TypeInst(Type):
   name: str
@@ -117,10 +126,14 @@ class TypeInst(Type):
     return str(self)
 
   def __eq__(self, other):
-    if not isinstance(other, TypeInst):
-      return False
-    return self.name == other.name and \
-      all([t1 == t2 for (t1, t2) in zip(self.arg_types, other.arg_types)])
+    match other:
+      case TypeInst(l, name, arg_types):
+        return self.name == name and \
+          all([t1 == t2 for (t1, t2) in zip(self.arg_types, arg_types)])
+      case GenericType(l, name):
+        return self.name == name
+      case _:
+        return False
 
 # This is the type of a constructor such as 'empty' of a generic union
 # when we do not yet know the type arguments.
@@ -132,7 +145,14 @@ class GenericType(Type):
     return self.name + '<?>'
 
   def __eq__(self, other):
-    return False
+    match other:
+      case TypeInst(l, name, arg_types):
+        return self.name == name
+      case GenericType(l, name):
+        return self.name == name
+      case _:
+        return False
+
   
 ################ Patterns ######################################
 

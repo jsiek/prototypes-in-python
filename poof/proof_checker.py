@@ -228,11 +228,13 @@ def check_proof(proof, env, type_env):
     case PTrue(loc):
       ret = Bool(loc, True)
     case PLet(loc, label, frm, reason, rest):
+      check_formula(frm, env, type_env)
       check_proof_of(reason, frm, env, type_env)
       new_env = copy_dict(env)
       new_env[label] = frm
       ret = check_proof(rest, new_env, type_env)
     case PAnnot(loc, claim, reason):
+      check_formula(claim, env, type_env)
       check_proof_of(reason, claim, env, type_env)
       ret = claim
     case PTuple(loc, pfs):
@@ -385,11 +387,15 @@ def check_proof_of(proof, formula, env, type_env):
             check_proof_of(case, formula, new_env, type_env)
         case _:
           error(proof.location, "expected 'or', not " + str(sub_frm))
-    case Induction(loc, type_name, cases):
+    case Induction(loc, typ, cases):
+      match typ:
+        case TypeName(l1, n):
+          type_name = n
+        case TypeInst(l1, n, type_args):
+          type_name = n
       match env[type_name]:
         case Union(loc2, name, typarams, alts):
           for (constr,indcase) in zip(alts, cases):
-            #print('induction case ' + str(indcase.pattern))
             if indcase.pattern.constructor != constr.name:
               error(indcase.location, "expected a case for " + constr.name \
                     + " not " + indcase.pattern.constructor)
@@ -411,7 +417,12 @@ def check_proof_of(proof, formula, env, type_env):
             trm = pattern_to_term(indcase.pattern)
             goal = instantiate(loc, formula, [trm])
             new_type_env = copy_dict(type_env)
-            for (x,t) in zip(indcase.pattern.parameters, constr.parameters):
+            if len(typarams) > 0:
+              sub = { T.value: ty for (T,ty) in zip(typarams, typ.arg_types)}
+              parameter_types = [substitute(sub, p) for p in constr.parameters]
+            else:
+              parameter_types = constr.parameters
+            for (x,t) in zip(indcase.pattern.parameters, parameter_types):
               new_type_env[x] = t
             check_proof_of(indcase.body, goal, new_env, new_type_env)
         case _:
@@ -454,9 +465,13 @@ def check_proof_of(proof, formula, env, type_env):
       form = check_proof(proof, env, type_env)
       check_implies(proof.location, form.reduce(env), formula.reduce(env))
 
-
 def type_match(loc, tyvars, param_ty, arg_ty, matching):
+  if get_verbose():
+    print("type_match(" + str(param_ty) + "," + str(arg_ty) + ")")
+    print("\t" + str(matching))
   match (param_ty, arg_ty):
+    case (TypeName(l1, n1), TypeName(l2, n2)) if n1 == n2:
+      pass
     case (TypeName(l1, name), _) if name in tyvars:
       if name in matching.keys():
         type_match(loc, tyvars, matching[name], arg_ty, matching)
@@ -497,7 +512,8 @@ def type_check_call_helper(loc, funty, args, type_env, env, recfun, subterms):
         matching = {}
         for (param_ty, arg_ty) in zip(param_types, arg_types):
           type_match(loc, typarams, param_ty, arg_ty, matching)
-        return substitute(matching, return_type)
+        inst_return_type = substitute(matching, return_type)
+        return inst_return_type
     case _:
       error(loc, 'expected operator to have function type, not ' + str(funty))
       
@@ -509,6 +525,8 @@ def type_check_call(loc, rator, args, type_env, env, recfun, subterms):
 def synth_term(term, type_env, env, recfun, subterms):
   if get_verbose():
     print('synth_term: ' + str(term))
+    print('type_env: ' + \
+          ', '.join([k + ' : ' + str(t) for (k,t) in type_env.items()]))
   match term:
     case Int(loc, value):
       ret = IntType(loc)
@@ -616,14 +634,27 @@ def is_constructor(constr_name, env):
         continue
   return False
         
-def check_constructor_pattern(loc, constr_name, env, tyname, params, type_env):
+def check_constructor_pattern(loc, constr_name, params, typ, env, tyname, type_env):
+  if get_verbose():
+    print('check_constructor_pattern: ' + constr_name)
   for (name,defn) in env.items():
     if name == tyname:
       match defn:
         case Union(loc2, name, typarams, alts):
+          # example:
+          # typ is List<E>
+          # union List<T> { empty; node(T, List<T>); }
+          # constr_name == node
           for constr in alts:
+            # constr = node(T, List<T>)
             if constr.name == constr_name:
-              for (param, param_type) in zip(params, constr.parameters):
+              if len(typarams) > 0:
+                sub = { T.value: ty for (T,ty) in zip(typarams, typ.arg_types)}
+                # print('instantiate constructor: ' + str(sub))
+                parameter_types = [substitute(sub, p) for p in constr.parameters]
+              else:
+                parameter_types = constr.parameters
+              for (param, param_type) in zip(params, parameter_types):
                 type_env[param] = param_type
               return
         case _:
@@ -635,10 +666,10 @@ def check_pattern(pattern, typ, env, type_env):
     case PatternCons(loc, constr, params):
       match typ:
         case TypeName(loc2, name):
-          check_constructor_pattern(loc, constr, env, name, params, type_env)
+          check_constructor_pattern(loc, constr, params, typ, env, name, type_env)
         case TypeInst(loc2, name, tyargs):
           # TODO: handle the tyargs
-          check_constructor_pattern(loc, constr, env, name, params, type_env)
+          check_constructor_pattern(loc, constr, params, typ, env, name, type_env)
         case _:
           error(loc, 'expected something of type ' + str(typ) + ' not ' + constr)
     case _:
@@ -673,23 +704,39 @@ def check_formula(frm, env, type_env):
 def check_statement(stmt, env, type_env):
   match stmt:
     case Define(loc, name, body):
+      if get_verbose():
+        print('** check_statement(' + name + ')')
       ty = synth_term(body, type_env, env, None, [])
       env[name] = body
       type_env[name] = ty
     case Theorem(loc, name, frm, pf):
+      if get_verbose():
+        print('** check_statement(' + name + ')')
+        print('checking theorem formula ' + str(frm))
+        print('type_env: ' + \
+          ', '.join([k + ' : ' + str(t) for (k,t) in type_env.items()]))
       check_formula(frm, env, type_env)
+      if get_verbose():
+        print('checking proof of theorem')
+        print('type_env: ' + \
+          ', '.join([k + ' : ' + str(t) for (k,t) in type_env.items()]))
       check_proof_of(pf, frm, env, type_env)
       env[name] = frm
     case RecFun(loc, name, typarams, params, returns, cases):
+      if get_verbose():
+        print('** check_statement(' + name + ')')
       type_env[name] = FunctionType(loc, typarams, params, returns)
+      new_type_env = copy_dict(type_env)
       for fun_case in cases:
-        check_pattern(fun_case.pattern, params[0], env, type_env)
+        check_pattern(fun_case.pattern, params[0], env, new_type_env)
         for (x,typ) in zip(fun_case.parameters, params[1:]):
-          type_env[x] = typ
-        check_term(fun_case.body, returns, type_env, env,
+          new_type_env[x] = typ
+        check_term(fun_case.body, returns, new_type_env, env,
                    name, fun_case.pattern.parameters)
       env[name] = stmt
     case Union(loc, name, typarams, alts):
+      if get_verbose():
+        print('** check_statement(' + name + ')')
       # TODO: check for well-defined types in the constructor definitions
       env[name] = stmt
       for constr in alts:
@@ -710,6 +757,8 @@ def check_statement(stmt, env, type_env):
         else:
           type_env[constr.name] = TypeName(loc, name)
     case Import(loc, name):
+      if get_verbose():
+        print('** check_statement(import ' + name + ')')
       filename = name + ".pf"
       file = open(filename, 'r')
       src = file.read()

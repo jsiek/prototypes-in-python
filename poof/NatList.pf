@@ -10,16 +10,6 @@ function length(NatList) -> Nat {
   length(node(n, next)) = 1 + length(next);
 }
 
-theorem length_empty: length(empty) = 0
-proof
-  reflexive
-end
-
-theorem length_one: length(node(0, empty)) = 1
-proof
-  reflexive
-end
-
 function append(NatList, NatList) -> NatList {
   append(empty, ys) = ys;
   append(node(n, xs), ys) = node(n, append(xs, ys));
@@ -44,6 +34,16 @@ proof
                               by rewrite goal with IHys then reflexive
       ... = length(node(n,xs')) + length(ys)    by reflexive
   }
+end
+
+theorem length_empty: length(empty) = 0
+proof
+  reflexive
+end
+
+theorem length_one: length(node(0, empty)) = 1
+proof
+  reflexive
 end
 
 theorem append_assoc: all xs:NatList. all ys:NatList, zs:NatList.
