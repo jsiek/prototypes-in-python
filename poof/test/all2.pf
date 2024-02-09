@@ -1,6 +1,0 @@
-theorem T: all p : bool. if p then p
-proof
-  arbitrary p : bool;
-  suppose P: p;
-  P
-end

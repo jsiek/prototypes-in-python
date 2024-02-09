@@ -1,5 +1,0 @@
-theorem T3: if false then false
-proof
-  suppose F: false;
-  F
-end
